@@ -1,5 +1,5 @@
 function outfilename=WBM(filename,url_part,varargin)
-% This functions acts as an API for the Wayback Machine (web.archive.org).
+%This functions acts as an API for the Wayback Machine (web.archive.org)
 %
 % With this function you can download captures to the internet archive that matches a date pattern.
 % If the current time matches the pattern and there is no valid capture, a capture will be
@@ -15,140 +15,159 @@ function outfilename=WBM(filename,url_part,varargin)
 % https://en.wikipedia.org/wiki/Help:Using_the_Wayback_Machine
 % Fuzzy date matching behavior is based on https://archive.org/web/web-advancedsearch.php
 %
-% syntax:
-% outfilename=WBM(filename,url_part)
-% outfilename=WBM(___,Name,Value)
-% outfilename=WBM(___,options)
+% Syntax:
+%   outfilename=WBM(filename,url_part)
+%   outfilename=WBM(___,Name,Value)
+%   outfilename=WBM(___,options)
 %
-% outfilename  : Full path of the output file, the variable is empty if the download failed.
-% filename     : The target filename in any format that websave (or urlwrite) accepts. If this file
-%                already exists, it will be overwritten in most cases.
-% url_part     : This URL will be searched for on the WBM. The URL might be changed (e.g. ':80' is 
-%                often added).
-% options      : A struct containing the fields described below. Missing fields are filled with
-%                default values. Typos will trigger an error.
+% Input/output arguments:
+% outfilename:
+%   Full path of the output file, the variable is empty if the download failed.
+% filename:
+%   The target filename in any format that websave (or urlwrite) accepts. If this file already
+%   exists, it will be overwritten in most cases.
+% url_part:
+%   This URL will be searched for on the WBM. The URL might be changed (e.g. ':80' is often added).
+% options:
+%   A struct with Name,Value parameters. Missing parameters are filled with the defaults listed
+%   below. Using incomplete parameter names or incorrect capitalization is allowed, as long as
+%   there is a unique match.
+%   Parameters related to warning/error redirection will be parsed first.
 %
-% date_part    : A string with the date of the capture. It must be in the yyyymmddHHMMSS format,
-%                but doesn't have to be complete. Note that this is represented in UTC. If
-%                incomplete, the Wayback Machine will return a capture that is as close to the
-%                midpoint of the matching range as possible. So for date_part='2' the range is
-%                2000-01-01 00:00 to 2999-12-31 23:59:59, meaning the WBM will attempt to return
-%                the capture closest to 2499-12-31 23:59:59. [default='2';]
-% UseLocalTime : A scalar logical. Interpret the date_part in local time instead of UTC. This has
-%                the practical effect of the upper and lower bounds of the matching date being
-%                shifted by the timezone offset. [default=false;]
-% tries        : A 1x3 vector. The first value is the total number of times an attempt to load the
-%                page is made, the second value is the number of save attempts and the last value
-%                is the number of timeouts allowed. [default=[5 4 4];]
-% verbose      : A scalar denoting the verbosity. Level 0 will hide all errors that are caught.
-%                Level 1 will enable only warnings about the internet connection being down. Level
-%                2 includes errors NOT matching the usual pattern as well and level 3 includes all
-%                other errors that get rethrown as warning. Level 4 adds a warning on retrying to
-%                retrieve the timestamp (this will always happen for pages without a capture, and
-%                may happen every now and then for no apparent reason).[default=3;]
-%                Octave uses libcurl, making error catching is bit more difficult. This will result
-%                in more HTML errors being rethrown as warnings under Octave than Matlab.
-%                There is no check in place to restrict this to level 0-4 (even inf is allowed), so
-%                you can anticipate on higher levels in future versions of this function.
-% if_UTC_failed: This is a char array with the intended behavior for when this function is unable
-%                to determine the UTC. The options are 'error', 'warn_0', 'warn_1', 'warn_2',
-%                'warn_3', and 'ignore'. For the options starting with warn_, a warning will be
-%                triggered if the 'verbose' parameter is set to this level or higher (so 'warn_0'
-%                will trigger a warning if 'verbose' is set to 0).
-%                If this parameter is not set to 'error', the valid time range is expanded by -12
-%                and +14 hours to account for all possible time zones, and the midpoint is shifted
-%                accordingly. [default='warn_3']
-% print_to_con : A logical that controls whether warnings and other output will be printed to the
-%                command window. Errors can't be turned off. [default=true;] if either
-%                print_to_fid, print_to_obj, or print_to_fcn is specified then [default=false]
-% print_to_fid : The file identifier where console output will be printed. Errors and warnings will
-%                be printed including the call stack. You can provide the fid for the command
-%                window (fid=1) to print warnings as text. Errors will be printed to the specified
-%                file before being actually thrown. [default=[];]
-%                If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the
-%                effect of suppressing every output except errors.
-%                This parameter does not affect warnings or errors during input parsing.
-%                Array inputs are allowed.
-% print_to_obj : The handle to an object with a String property, e.g. an edit field in a GUI where
-%                console output will be printed. Messages with newline characters (ignoring
-%                trailing newlines) will be returned as a cell array. This includes warnings and
-%                errors, which will be printed without the call stack. Errors will be written to
-%                the object before the error is actually thrown. [default=[];]
-%                If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the
-%                effect of suppressing every output except errors.
-%                This parameter does not affect warnings or errors during input parsing.
-%                Array inputs are allowed.
-% print_to_fcn : A struct with a function handle, anonymous function or inline function in the 'h'
-%                field and optionally additional data in the 'data' field. The function should
-%                accept three inputs: a char array (either 'warning' or 'error'), a struct with the
-%                message, id, and stack, and the optional additional data. The function(s) will be
-%                run before the error is actually thrown. [default=[];]
-%                If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the
-%                effect of suppressing every output except errors.
-%                This parameter does not affect warnings or errors during input parsing.
-%                Array inputs are allowed.
-% m_date_r     : A string describing the response to the date missing in the downloaded web page.
-%                Usually, either the top bar will be present (which contains links), or the page
-%                itself will contain links, so this situation may indicate a problem with the save
-%                to the WBM. Allowed values are 'ignore', 'warning' and 'error'. Be aware that
-%                non-page content (such as images) will set off this response. Flags other than '*'
-%                will also set off this response. [default='warning';] if flags~='*' then
-%                [default='ignore']
-% response     : The response variable is a cell array, where each row encodes one sequence of HMTL
-%                errors and the appropriate next action. The syntax of each row is as follows:
-%                #1 If there is a sequence of failure that fit the first cell,
-%                #2 and the HTML error codes of the sequence are equal to the second cell,
-%                #3 then respond as per the third cell.
-%                The sequence of failures are encoded like this:
-%                t1: failed attempt to load, t2: failed attempt to save, tx: either failed to load,
-%                or failed to save.
-%                The error code list must be HTML status codes. The Matlab timeout error is encoded
-%                with 4080 (analogous to the HTTP 408 timeout error code). The  error is extracted
-%                from the identifier, which is not always possible, especially in the case of
-%                Octave. 
-%                The response in the third cell is either 'load', 'save', 'exit', or 'pause_retry'.
-%                Load and save set the preferred type. If a response is not allowed by 'tries'
-%                left, the other response (save or load) is tried, until sum(tries(1:2))==0. If the
-%                response is set to exit, or there is still no successful download after tries has
-%                been exhausted, the output file will be deleted and the script will exit. The
-%                pause_retry is intended for use with an error 429. See the err429 parameter for
-%                more options. [default={'tx',404,'load';'txtx',[404 404],'save';'tx',403,'save';
-%                't2t2',[403 403],'exit';'tx',429,'pause_retry'};]
-% err429       : Sometimes the webserver will return an 429 status code. This should trigger a
-%                waiting period of a few seconds. This parameter controls the behavior of this
-%                function in case of a 429 status code. It is a struct with the following fields.
-%                The CountsAsTry field (logical) describes if the attempt should decrease the tries
-%                counter. The TimeToWait field (double) contains the time in seconds to wait before
-%                retrying. The PrintAtVerbosityLevel field (double) contains the verbosity level at
-%                which a text should be printed, showing the user the function did not freeze.
-%                [default=struct('CountsAsTry',false,'TimeToWait',15, 'PrintAtVerbosityLevel',3);]
-% ignore       : The ignore variable is vector with the same type of error codes as in the response
-%                variable. Ignored errors will only be ignored for the purposes of the response,
-%                they will not prevent the tries vector from decreasing. [default=4080;]
-% flag         : The flags can be used to specify an explicit version of the archived page. The
-%                options are 'id' (identical), 'js' (Javascript), 'cs' (CSS), 'im' (image),
-%                'fw'/'if' (iFrame), or * (explicitly expand date, shows calendar in browser mode).
-%                With the 'id' flag the page is show as captured (i.e. without the WBM banner,
-%                making it ideal for e.g. exe files). With the 'id' and '*' flags the date check
-%                will fail, so the missing date response (m_date_r) will be invoked. For the 'im'
-%                flag you can circumvent this by first loading in the normal mode ('*'), and then
-%                extracting the image link from that page. That way you can enforce a date pattern
-%                and still get the image. The Wikipedia page suggest that a flag syntax requires a
-%                full date, but this seems not to be the case, as the date can still auto-expand.
-%                [default='*';]
-% waittime     : This value controls the maximum time that is spent waiting on the internet
-%                connection for each call of this function. This does not include the time waiting
-%                as a result of a 429 error. The input must be convertible to a scalar double. This
-%                is the time in seconds.
-%                NB: Setting this to inf will cause an infite loop if the internet connection is
-%                lost. [default=60]
-% timeout      : This value is the allowed timeout in seconds. It is ignored if it isn't supported.
-%                The input must be converitble to a scalar double. [default=10]
+% Name,Value parameters:
+%   date_part:
+%      A string with the date of the capture. It must be in the yyyymmddHHMMSS format, but doesn't
+%      have to be complete. Note that this is represented in UTC. If incomplete, the Wayback
+%      Machine will return a capture that is as close to the midpoint of the matching range as
+%      possible. So for date_part='2' the range is 2000-01-01 00:00 to 2999-12-31 23:59:59, meaning
+%      the WBM will attempt to return the capture closest to 2499-12-31 23:59:59. [default='2';]
+%   UseLocalTime:
+%      A scalar logical. Interpret the date_part in local time instead of UTC. This has the
+%      practical effect of the upper and lower bounds of the matching date being shifted by the
+%      timezone offset. [default=false;]
+%   tries:
+%      A 1x3 vector. The first value is the total number of times an attempt to load the page is
+%      made, the second value is the number of save attempts and the last value is the number of
+%      timeouts allowed. [default=[5 4 4];]
+%   verbose:
+%      A scalar denoting the verbosity. Level 0 will hide all errors that are caught. Level 1 will
+%      enable only warnings about the internet connection being down. Level 2 includes errors NOT
+%      matching the usual pattern as well and level 3 includes all other errors that get rethrown
+%      as warning. Level 4 adds a warning on retrying to retrieve the timestamp (this will always
+%      happen for pages without a capture, and may happen every now and then for no apparent
+%      reason).[default=3;]
+%      Octave uses libcurl, making error catching is bit more difficult. This will result in more
+%      HTML errors being rethrown as warnings under Octave than Matlab. There is no check in place
+%      to restrict this to level 0-4 (even inf is allowed), so you can anticipate on higher levels
+%      in future versions of this function.
+%   if_UTC_failed:
+%      This is a char array with the intended behavior for when this function is unable to
+%      determine the UTC. The options are 'error', 'warn_0', 'warn_1', 'warn_2', 'warn_3', and
+%      'ignore'. For the options starting with warn_, a warning will be triggered if the 'verbose'
+%      parameter is set to this level or higher (so 'warn_0' will trigger a warning if 'verbose' is
+%      set to 0).
+%      If this parameter is not set to 'error', the valid time range is expanded by -12 and +14
+%      hours to account for all possible time zones, and the midpoint is shifted accordingly.
+%      [default='warn_3']
+%   m_date_r:
+%      A string describing the response to the date missing in the downloaded web page. Usually,
+%      either the top bar will be present (which contains links), or the page itself will contain
+%      links, so this situation may indicate a problem with the save to the WBM. Allowed values are
+%      'ignore', 'warning' and 'error'. Be aware that non-page content (such as images) will set
+%      off this response. Flags other than '*' will also set off this response.
+%      [default='warning';] if flags~='*' then [default='ignore']
+%   response:
+%      The response variable is a cell array, where each row encodes one sequence of HMTL errors
+%      and the appropriate next action. The syntax of each row is as follows:
+%      #1 If there is a sequence of failure that fit the first cell,
+%      #2 and the HTML error codes of the sequence are equal to the second cell,
+%      #3 then respond as per the third cell.
+%      The sequence of failures are encoded like this:
+%      t1: failed attempt to load, t2: failed attempt to save, tx: either failed to load, or failed
+%      to save.
+%      The error code list must be HTML status codes. The Matlab timeout error is encoded with 4080
+%      (analogous to the HTTP 408 timeout error code). The  error is extracted from the identifier,
+%      which is not always possible, especially in the case of Octave.
+%      The response in the third cell is either 'load', 'save', 'exit', or 'pause_retry'.
+%      Load and save set the preferred type. If a response is not allowed (i.e. if the
+%      corresponding element of 'tries' is 0), the other response (save or load) is tried, until
+%      sum(tries(1:2))==0. If the response is set to exit, or there is still no successful download
+%      after tries has been exhausted, the output file will be deleted and the script will exit.
+%      The pause_retry is intended for use with an error 429. See the err429 parameter for more
+%      options. [default={'tx',404,'load';'txtx',[404 404],'save';'tx',403,'save';
+%      't2t2',[403 403],'exit';'tx',429,'pause_retry'};]
+%   err429:
+%      Sometimes the webserver will return a 429 status code. This should trigger a waiting period
+%      of a few seconds. This parameter controls the behavior of this function in case of a 429
+%      status code. It is a struct with the following fields.
+%      The CountsAsTry field (logical) describes if the attempt should decrease the tries counter.
+%      The TimeToWait field (double) contains the time in seconds to wait before retrying.
+%      The PrintAtVerbosityLevel field (double) contains the verbosity level at which a text should
+%      be printed, showing the user the function did not freeze.
+%      [default=struct('CountsAsTry',false,'TimeToWait',15, 'PrintAtVerbosityLevel',3);]
+%   ignore:
+%      The ignore variable is vector with the same type of error codes as in the response variable.
+%      Ignored errors will only be ignored for the purposes of the response, they will not prevent
+%      the tries vector from decreasing. [default=4080;]
+%   flag:
+%      The flags can be used to specify an explicit version of the archived page. The options are
+%      'id' (identical), 'js' (Javascript), 'cs' (CSS), 'im' (image), 'fw'/'if' (iFrame), or *
+%      (explicitly expand date, shows calendar in browser mode). With the 'id' flag the page is
+%      show as captured (i.e. without the WBM banner, making it ideal for e.g. exe files). With the
+%      'id' and '*' flags the date check will fail, so the missing date response (m_date_r) will be
+%      invoked. For the 'im' flag you can circumvent this by first loading in the normal mode
+%      ('*'), and then extracting the image link from that page. That way you can enforce a date
+%      pattern and still get the image. The Wikipedia page suggest that a flag syntax requires a
+%      full date, but this seems not to be the case, as the date can still auto-expand.
+%      [default='*';]
+%   waittime:
+%      This value controls the maximum time that is spent waiting on the internet connection for
+%      each call of this function. This does not include the time waiting as a result of a 429
+%      error. The input must be convertible to a scalar double. This is the time in seconds.
+%      NB: Setting this to inf will cause an infite loop if the internet connection is lost.
+%      [default=60]
+%   timeout:
+%      This value is the allowed timeout in seconds. It is ignored if it isn't supported. The input
+%      must be convertible to a scalar double. [default=10]
+%   print_to_con:
+%      An attempt is made to also use this parameter for warnings or errors during input parsing.
+%      A logical that controls whether warnings and other output will be printed to the command
+%      window. Errors can't be turned off. [default=true;] if either print_to_fid, print_to_obj, or
+%      print_to_fcn is specified then [default=false]
+%   print_to_fid:
+%      An attempt is made to also use this parameter for warnings or errors during input parsing.
+%      The file identifier where console output will be printed. Errors and warnings will be
+%      printed including the call stack. You can provide the fid for the command window (fid=1) to
+%      print warnings as text. Errors will be printed to the specified file before being actually
+%      thrown. [default=[];]
+%      If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
+%      suppressing every output except errors. 
+%      Array inputs are allowed.
+%   print_to_obj:
+%      An attempt is made to also use this parameter for warnings or errors during input parsing.
+%      The handle to an object with a String property, e.g. an edit field in a GUI where console
+%      output will be printed. Messages with newline characters (ignoring trailing newlines) will
+%      be returned as a cell array. This includes warnings and errors, which will be printed
+%      without the call stack. Errors will be written to the object before the error is actually
+%      thrown. [default=[];]
+%      If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
+%      suppressing every output except errors.
+%      Array inputs are allowed.
+%   print_to_fcn:
+%      An attempt is made to also use this parameter for warnings or errors during input parsing.
+%      A struct with a function handle, anonymous function or inline function in the 'h' field and
+%      optionally additional data in the 'data' field. The function should accept three inputs: a
+%      char array (either 'warning' or 'error'), a struct with the message, id, and stack, and the
+%      optional additional data. The function(s) will be run before the error is actually thrown.
+%      [default=[];]
+%      If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
+%      suppressing every output except errors.
+%      Array inputs are allowed.
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 3.0.0                                                         |%
-%|  Date:    2021-05-19                                                    |%
+%|  Version: 3.1.0                                                         |%
+%|  Date:    2022-01-22                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -173,29 +192,27 @@ if ~(nargout==0 || nargout==1) %might trigger 'MATLAB:TooManyOutputs' instead
 end
 [success,opts,ME]=WBM_parse_inputs(filename,url_part,varargin{:});
 if ~success
-    %The throwAsCaller function was introduced in R2007b, hence the rethrow here.
-    %This will be triggered for syntax errors, so the error redirection can't be used.
-    rethrow(ME)
+    %If the parsing of print_to failed (which is tried first), the default will be used.
+    error_(opts.print_to,ME)
 else
-    [date_part,tries,response,ignore,verbose,UseURLwrite,flag,err429,print_2,UTC_fail_response,...
-        timeout]=...
+    [        date_part,     tries,     response,     ignore,     verbose,     UseURLwrite ...
+        ,     flag,     err429,     UTC_fail_response,     timeout,     print_to]=...
         deal(...
-        opts.date_part,opts.tries,opts.response,opts.ignore,opts.verbose,opts.UseURLwrite,...
-        opts.flag,opts.err429,opts.print_2__options,opts.UTC_fail_response,opts.timeout);
+        opts.date_part,opts.tries,opts.response,opts.ignore,opts.verbose,opts.UseURLwrite ...
+        ,opts.flag,opts.err429,opts.UTC_fail_response,opts.timeout,opts.print_to);
     SavesAllowed=tries(2)>0;
-    opts.print_2=opts.print_2__options;
     %Cap the time we wait for an internet connection to avoid infinite loops (time is in seconds).
     waittime=struct('cap',opts.waittime,'total',0);
 end
 if ~TestFolderWritePermission(fileparts(filename))
-    error_(print_2,'HJW:WBM:NoWriteFolder',...
+    error_(print_to,'HJW:WBM:NoWriteFolder',...
         'The target folder doesn''t exist or Matlab doesn''t have write permission for it.')
 end
 if ~WBM_UTC_test % No UTC determination is available.
     if strcmp(UTC_fail_response,'error')
-        error_(print_2,'HJW:WBM:UTC_missing_error','Retrieval of UTC failed.')
+        error_(print_to,'HJW:WBM:UTC_missing_error','Retrieval of UTC failed.')
     elseif strcmp(UTC_fail_response,'warn')
-        warning_(print_2,'HJW:WBM:UTC_missing_warning',...
+        warning_(print_to,'HJW:WBM:UTC_missing_warning',...
             'Retrieval of UTC failed, continuing with wider date/time range.')
     end
 end
@@ -227,7 +244,27 @@ while ~success && ...         %no successful download yet?
             
             [status,waittime]=confirm_capture_is_available(url_part,date_part,waittime,opts);
             if status<200 || status>=300
-                error(['MATLAB:webservices:HTTP' num2str(status) 'StatusCodeError'],'trigger')
+                %No capture is available for this URL. Report this to the user (if the verbosity is
+                %set high enough). Then return to the start of the loop to try saving (if there are
+                %save attempts left).
+                if verbose>=3
+                    txt=sprintf('No capture found for this URL. (download of %s)',filename);
+                    if print_to.boolean.con
+                        fprintf('%s\n',txt)
+                    end
+                    if print_to.boolean.fid
+                        for FID=print_to.fid(:).',fprintf(FID,'%s\n',txt);end
+                    end
+                    if print_to.boolean.obj
+                        set(print_to.obj,'String',txt)
+                    end
+                    drawnow
+                end
+                %Try saving or quit.
+                prefer_type=2;
+                if tries(2)>0,continue
+                else         ,break
+                end
             end
             
             %If the execution reaches this point, there is a capture available, 
@@ -268,13 +305,13 @@ while ~success && ...         %no successful download yet?
                 if waittime.total>waittime.cap
                     %Total wait time exceeded, return the error condition.
                     if verbose>=1
-                        warning_(print_2,'Maximum waiting time for internet connection exceeded.')
+                        warning_(print_to,'Maximum waiting time for internet connection exceeded.')
                     end
                     tries=zeros(size(tries));continue
                 end
                 curr_time=datestr(now,'HH:MM:SS');
                 if verbose>=1
-                    warning_(print_2,'Internet connection down, retrying in %d seconds (@%s)',...
+                    warning_(print_to,'Internet connection down, retrying in %d seconds (@%s).',...
                         2^connection_down_wait_factor,curr_time)
                 end
                 pause(2^connection_down_wait_factor)
@@ -302,7 +339,7 @@ while ~success && ...         %no successful download yet?
                 %window clutter, consider lowering the verbosity level.
                 code=-1;
                 if verbose>=2
-                    warning_(print_2,ME)
+                    warning_(print_to,ME)
                 end
             else
                 %Octave doesn't really returns a identifier for urlwrite, nor do very old releases
@@ -321,16 +358,16 @@ while ~success && ...         %no successful download yet?
         end
         
         if verbose>=3
-            txt=sprintf('Error %d tries(%d,%d,%d) (download of %s)',...
+            txt=sprintf('Error %d tries(%d,%d,%d) (download of %s).',...
                 double(code),tries(1),tries(2),tries(3),filename);
-            if print_2.boolean.con
+            if print_to.boolean.con
                 fprintf('%s\n',txt)
             end
-            if print_2.boolean.fid
-                for FID=print_2.fid(:).',fprintf(FID,'%s\n',txt);end
+            if print_to.boolean.fid
+                for FID=print_to.fid(:).',fprintf(FID,'%s\n',txt);end
             end
-            if print_2.boolean.obj
-                set(print_2.obj,'String',txt)
+            if print_to.boolean.obj
+                set(print_to.obj,'String',txt)
             end
             drawnow
         end
@@ -376,34 +413,34 @@ while ~success && ...         %no successful download yet?
                             if verbose>=err429.PrintAtVerbosityLevel
                                 N=10;
                                 s='Waiting a while until the server won''t block us anymore';
-                                if print_2.boolean.con
+                                if print_to.boolean.con
                                     fprintf(s);drawnow
                                 end
-                                if print_2.boolean.fid
-                                    for FID=print_2.fid(:).',fprintf(FID,s);end,drawnow
+                                if print_to.boolean.fid
+                                    for FID=print_to.fid(:).',fprintf(FID,s);end,drawnow
                                 end
                                 for n=1:N
                                     pause(err429.TimeToWait/N)
-                                    if print_2.boolean.con
+                                    if print_to.boolean.con
                                         fprintf('.');drawnow
                                     end
-                                    if print_2.boolean.fid
-                                        for FID=print_2.fid(:).',fprintf(FID,'.');end,drawnow
+                                    if print_to.boolean.fid
+                                        for FID=print_to.fid(:).',fprintf(FID,'.');end,drawnow
                                     end
-                                    if print_2.boolean.obj
+                                    if print_to.boolean.obj
                                         s=[s '.']; %#ok<AGROW>
-                                        set(print_2.obj,s);drawnow
+                                        set(print_to.obj,s);drawnow
                                     end
                                 end
-                                if print_2.boolean.con
+                                if print_to.boolean.con
                                     fprintf('\nContinuing\n');drawnow
                                 end
-                                if print_2.boolean.fid
-                                    for FID=print_2.fid(:).',fprintf(FID,'\nContinuing\n');end
+                                if print_to.boolean.fid
+                                    for FID=print_to.fid(:).',fprintf(FID,'\nContinuing\n');end
                                     drawnow
                                 end
-                                if print_2.boolean.obj
-                                    set(print_2.obj,'Continuing');drawnow
+                                if print_to.boolean.obj
+                                    set(print_to.obj,'Continuing');drawnow
                                 end
                             else
                                 pause(err429.TimeToWait)
@@ -442,7 +479,7 @@ if isempty(t)
     %unnecessary save. See WBM_retrieve_timestamp for the conditions under which this might occur.
     if opts.verbose>3 %Print a warning to alert the user.
         msg=sprintf('Retrying to retrieve the timestamp for %s',url);
-        warning_(opts.print_2,'HJW:WBM:RetryTimestamp',msg)
+        warning_(opts.print_to,'HJW:WBM:RetryTimestamp',msg)
     end
     [t,status,waittime]=WBM_retrieve_timestamp(url,date,opts,waittime);
 end
@@ -518,6 +555,24 @@ else
     for n=1:numel(c),c{n}=uint32(c{n});end
 end
 end
+function tf=CharIsUTF8
+%This provides a single place to determine if the runtime uses UTF-8 or UTF-16 to encode chars.
+%The advantage is that there is only 1 function that needs to change if and when Octave switches to
+%UTF-16. This is unlikely, but not impossible.
+persistent persistent_tf
+if isempty(persistent_tf)
+    if exist('OCTAVE_VERSION','builtin')~=0 %Octave
+        %Test if Octave has switched to UTF-16 by looking if the Euro symbol is losslessly encoded
+        %with char.
+        w=struct('w',warning('off','all'));[w.msg,w.ID]=lastwarn;
+        persistent_tf=~isequal(8364,double(char(8364)));
+        warning(w.w);lastwarn(w.msg,w.ID); % Reset warning state.
+    else
+        persistent_tf=false;
+    end
+end
+tf=persistent_tf;
+end
 function date_correct=check_date(outfilename,opts,SaveAttempt)
 %Check if the date of the downloaded file matches the requested date.
 %
@@ -538,7 +593,7 @@ if ~exist(outfilename,'file')
     %If the file doesn't exist (not even as a 0 byte file), evidently something went wrong, so
     %retrying or alerting the user is warranted.
 end
-[m_date_r,date_bounds,print_2]=deal(opts.m_date_r,opts.date_bounds,opts.print_2);
+[m_date_r,date_bounds,print_to]=deal(opts.m_date_r,opts.date_bounds,opts.print_to);
 %Loading an unsaved page may result in a capture of the live page (but no save in the WBM). If this
 %happens the time in the file will be very close to the current time if this is the case. If the
 %save was actually triggered this is valid, but if this is the result of a load attempt, it is
@@ -583,12 +638,12 @@ if numel(idx)==0
         date_correct=true;
         return
     elseif m_date_r==1 %warning
-        warning_(print_2,'HJW:WBM:MissingDateWarning',...
+        warning_(print_to,'HJW:WBM:MissingDateWarning',...
             'No date found in file, unable to check date, assuming it is correct.')
         date_correct=true;
         return
     elseif m_date_r==2 %error
-        error_(print_2,'HJW:WBM:MissingDateError',...
+        error_(print_to,'HJW:WBM:MissingDateError',...
             ['Could not find date. This can mean there is an ',...
             'error in the save. Try saving manually.'])
     end
@@ -642,12 +697,12 @@ if ~SaveAttempt
             date_correct=true;
             return
         elseif m_date_r==1 %warning
-            warning_(print_2,'HJW:WBM:MissingDateWarning',...
+            warning_(print_to,'HJW:WBM:MissingDateWarning',...
                 'No date found in file, unable to check date, assuming it is correct.')
             date_correct=true;
             return
         elseif m_date_r==2 %error
-            error_(print_2,'HJW:WBM:MissingDateError',...
+            error_(print_to,'HJW:WBM:MissingDateError',...
                 ['Could not find date. This can mean there is an error in the save.',...
                 char(10),'Try saving manually.']) %#ok<CHARTEN>
         end
@@ -662,7 +717,7 @@ if ~SaveAttempt
     if timediff<10%seconds
         date_correct=false;
     elseif timediff<60%seconds
-        warning('HJW:WBM:LivePageStored',...
+        warning_(print_to,'HJW:WBM:LivePageStored',...
             ['The live page might have been saved instead of a capture.',char(10),...
             'Check on the WBM if a capture exists.']) %#ok<CHARTEN>
     end
@@ -680,8 +735,8 @@ end
 end
 function [tf,ME]=CheckMexCompilerExistence
 % Returns true if a mex compiler is expected to be installed.
-% The method used for R2008a and later is fairly slow, so the flag is stored in a persistent
-% variable. Use clear('all') or clear('functions') to reset this.
+% The method used for R2008a and later is fairly slow, so the flag is stored in a file. Run
+% ClearMexCompilerExistenceFlag() to reset this test.
 %
 % This function may result in false positives (e.g. by detecting an installed compiler that doesn't
 % work, or if a compiler is required for a specific language).
@@ -689,26 +744,204 @@ function [tf,ME]=CheckMexCompilerExistence
 %
 % Based on: http://web.archive.org/web/2/http://www.mathworks.com/matlabcentral/answers/99389
 % (this link will redirect to the URL with the full title)
+%
+% The actual test will be performed in a separate function. That way the same persistent can be
+% used for different functions containing this check as a subfunction.
+
 persistent tf_ ME_
 if isempty(tf_)
-    if ifversion('<',0,'Octave','>',0)
-        tf_=true; % Octave comes with a compiler out of the box
-    elseif ifversion('>=','R2008a')
-        try cc=mex.getCompilerConfigurations;catch,cc=[];end
-        tf_=~isempty(cc);
-    else
-        if ispc,ext='.bat';else,ext='.sh';end
-        tf_=exist(fullfile(prefdir,['mexopts' ext]),'file');
-    end
-    
-    msg={...
-        'No selected compiler was found. Please make sure a supported compiler is',...
-        'installed and set up. Run mex(''-setup'') for version-specific documentation.',...
-        '',...
-        'Clear persistent variables (with clear(''all'') or clear(''functions''))',...
-        'after running mex(''-setup'') to prevent this error.'};
-    msg=sprintf('\n%s',msg{:});msg=msg(2:end);
-    ME_=struct('identifier','HJW:CheckMexCompilerExistence:NoCompiler','message',msg);
+    fun_handle='CheckMexCompilerExistence_persistent';
+
+    %In some release-runtime combinations addpath has a permanent effect, in others it doesn't. By
+    %putting this code in this block, we are trying to keep these queries to a minimum.
+    [p,ME]=CreatePathFolder__CheckMexCompilerExistence_persistent;
+    if ~isempty(ME),tf=false;return,end
+
+    fn=fullfile(p,'ClearMexCompilerExistenceFlag.m');
+    txt={...
+        'function ClearMexCompilerExistenceFlag';
+        'fn=create_fn';
+        'if exist(fn,''file''),delete(fn),end';
+        'end';
+        'function fn=create_fn';
+        'v=version;v=v(regexp(v,''[a-zA-Z0-9()\.]''));';
+        'if ~exist(''OCTAVE_VERSION'', ''builtin'')';
+        '    runtime=''MATLAB'';';
+        '    type=computer;';
+        'else';
+        '    runtime=''OCTAVE'';';
+        '    arch=computer;arch=arch(1:(min(strfind(arch,''-''))-1));';
+        '    if ispc';
+        '        if strcmp(arch,''x86_64'')  ,type= ''win_64'';';
+        '        elseif strcmp(arch,''i686''),type= ''win_i686'';';
+        '        elseif strcmp(arch,''x86'') ,type= ''win_x86'';';
+        '        else                      ,type=[''win_'' arch];';
+        '        end';
+        '    elseif isunix && ~ismac %Essentially this is islinux';
+        '        if strcmp(arch,''i686'')      ,type= ''lnx_i686'';';
+        '        elseif strcmp(arch,''x86_64''),type= ''lnx_64'';';
+        '        else                        ,type=[''lnx_'' arch];';
+        '        end';
+        '    elseif ismac';
+        '        if strcmp(arch,''x86_64''),type= ''mac_64'';';
+        '        else                    ,type=[''mac_'' arch];';
+        '        end';
+        '    end';
+        'end';
+        'type=strrep(strrep(type,''.'',''''),''-'','''');';
+        'flag=[''flag_'' runtime ''_'' v ''_'' type ''.txt''];';
+        'fn=fullfile(fileparts(mfilename(''fullpath'')),flag);';
+        'end';
+        ''};
+    fid=fopen(fn,'wt');fprintf(fid,'%s\n',txt{:});fclose(fid);
+
+    fn=fullfile(p,[fun_handle '.m']);
+    txt={...
+        'function [tf,ME]=CheckMexCompilerExistence_persistent';
+        '% Returns true if a mex compiler is expected to be installed.';
+        '% The method used for R2008a and later is fairly slow, so the flag is stored in';
+        '% a file. Run ClearMexCompilerExistenceFlag() to reset this test.';
+        '%';
+        '% This function may result in false positives (e.g. by detecting an installed';
+        '% compiler that doesn''t work, or if a compiler is required for a specific';
+        '% language). False negatives should be rare.';
+        '%';
+        '% Based on: http://web.archive.org/web/2/';
+        '% http://www.mathworks.com/matlabcentral/answers/99389';
+        '% (this link will redirect to the URL with the full title)';
+        '';
+        'persistent tf_ ME_';
+        'if isempty(tf_)';
+        '    ME_=create_ME;';
+        '    fn =create_fn;';
+        '    if exist(fn,''file'')';
+        '        str=fileread(fn);';
+        '        tf_=strcmp(str,''compiler found'');';
+        '    else';
+        '        % Use evalc to suppress anything printed to the command window.';
+        '        [txt,tf_]=evalc(func2str(@get_tf)); %#ok<ASGLU>';
+        '        fid=fopen(fn,''w'');';
+        '        if tf_,fprintf(fid,''compiler found'');';
+        '        else , fprintf(fid,''compiler not found'');end';
+        '        fclose(fid);';
+        '    end';
+        '    ';
+        'end';
+        'tf=tf_;ME=ME_;';
+        'end';
+        'function fn=create_fn';
+        'v=version;v=v(regexp(v,''[a-zA-Z0-9()\.]''));';
+        'if ~exist(''OCTAVE_VERSION'', ''builtin'')';
+        '    runtime=''MATLAB'';';
+        '    type=computer;';
+        'else';
+        '    runtime=''OCTAVE'';';
+        '    arch=computer;arch=arch(1:(min(strfind(arch,''-''))-1));';
+        '    if ispc';
+        '        if strcmp(arch,''x86_64'')  ,type= ''win_64'';';
+        '        elseif strcmp(arch,''i686''),type= ''win_i686'';';
+        '        elseif strcmp(arch,''x86'') ,type= ''win_x86'';';
+        '        else                      ,type=[''win_'' arch];';
+        '        end';
+        '    elseif isunix && ~ismac %Essentially this is islinux';
+        '        if strcmp(arch,''i686'')      ,type= ''lnx_i686'';';
+        '        elseif strcmp(arch,''x86_64''),type= ''lnx_64'';';
+        '        else                        ,type=[''lnx_'' arch];';
+        '        end';
+        '    elseif ismac';
+        '        if strcmp(arch,''x86_64''),type= ''mac_64'';';
+        '        else                    ,type=[''mac_'' arch];';
+        '        end';
+        '    end';
+        'end';
+        'type=strrep(strrep(type,''.'',''''),''-'','''');';
+        'flag=[''flag_'' runtime ''_'' v ''_'' type ''.txt''];';
+        'fn=fullfile(fileparts(mfilename(''fullpath'')),flag);';
+        'end';
+        'function ME_=create_ME';
+        'msg={...';
+        '    ''No selected compiler was found.'',...';
+        '    ''Please make sure a supported compiler is installed and set up.'',...';
+        '    ''Run mex(''''-setup'''') for version-specific documentation.'',...';
+        '    '''',...';
+        '    ''Run ClearMexCompilerExistenceFlag() to reset this test.''};';
+        'msg=sprintf(''\n%s'',msg{:});msg=msg(2:end);';
+        'ME_=struct(...';
+        '    ''identifier'',''HJW:CheckMexCompilerExistence:NoCompiler'',...';
+        '    ''message'',msg);';
+        'end';
+        'function tf=get_tf';
+        '[isOctave,v_num]=ver_info;';
+        'if isOctave';
+        '        % Octave normally comes with a compiler out of the box, but for some';
+        '        % methods of installation an additional package may be required.';
+        '        tf=~isempty(try_file_compile);';
+        '    elseif v_num>=706 % ifversion(''>='',''R2008a'')';
+        '        % Just try to compile a MWE. Getting the configuration is very slow.';
+        '        [cc,TryNormalCheck]=try_file_compile;';
+        '        if TryNormalCheck';
+        '            % Something strange happened, so try the normal check anyway.';
+        '            try cc=mex.getCompilerConfigurations;catch,cc=[];end';
+        '        end';
+        '        tf=~isempty(cc);';
+        '    else';
+        '        if ispc,ext=''.bat'';else,ext=''.sh'';end';
+        '        tf=exist(fullfile(prefdir,[''mexopts'' ext]),''file'');';
+        'end';
+        'end';
+        'function [isOctave,v_num]=ver_info';
+        '% This is a compact and feature-poor equivalent of ifversion.';
+        '% To save space this can be used as an alternative.';
+        '% Example: R2018a is 9.4, so v_num will be 904.';
+        'isOctave=exist(''OCTAVE_VERSION'', ''builtin'');';
+        'v_num=version;';
+        'ii=strfind(v_num,''.'');if numel(ii)~=1,v_num(ii(2):end)='''';ii=ii(1);end';
+        'v_num=[str2double(v_num(1:(ii-1))) str2double(v_num((ii+1):end))];';
+        'v_num=v_num(1)+v_num(2)/100;v_num=round(100*v_num);';
+        'end';
+        'function [cc,TryNormalCheck]=try_file_compile';
+        'TryNormalCheck=false;';
+        'try';
+        '    [p,n]=fileparts(tempname);e=''.c'';';
+        '    n=n(regexp(n,''[a-zA-Z0-9_]'')); % Keep only valid characters.';
+        '    n=[''test_fun__'' n(1:min(15,end))];';
+        '    fid=fopen(fullfile(p,[n e]),''w'');';
+        '    fprintf(fid,''%s\n'',...';
+        '        ''#include "mex.h"'',...';
+        '        ''void mexFunction(int nlhs, mxArray *plhs[],'',...';
+        '        ''  int nrhs, const mxArray *prhs[]) {'',...';
+        '        ''    plhs[0]=mxCreateString("compiler works");'',...';
+        '        ''    return;'',...';
+        '        ''}'');';
+        '    fclose(fid);';
+        'catch';
+        '    % If there is a write error in the temp dir, something is wrong.';
+        '    % Just try the normal check.';
+        '    cc=[];TryNormalCheck=true;return';
+        'end';
+        'try';
+        '    current=cd(p);';
+        'catch';
+        '    % If the cd fails, something is wrong here. Just try the normal check.';
+        '    cc=[];TryNormalCheck=true;return';
+        'end';
+        'try';
+        '    mex([n e]);';
+        '    cc=feval(str2func(n));';
+        '    clear(n); % Clear to remove file lock.';
+        '    cd(current);';
+        'catch';
+        '    % Either the mex or the feval failed. That means we can safely assume no';
+        '    % working compiler is present. The normal check should not be required.';
+        '    cd(current);';
+        '    cc=[];TryNormalCheck=false;return';
+        'end';
+        'end';
+        ''};
+    fid=fopen(fn,'wt');fprintf(fid,'%s\n',txt{:});fclose(fid);
+    fun_handle=str2func(fun_handle);
+
+    [tf_,ME_]=feval(fun_handle);
 end
 tf=tf_;ME=ME_;
 end
@@ -730,6 +963,22 @@ end
 str=uint32(str);
 for m=1:numel(origin)
     str=PatternReplace(str,origin(m),target(m));
+end
+end
+function [p,ME]=CreatePathFolder__CheckMexCompilerExistence_persistent
+%Try creating a folder in either the tempdir or a persistent folder and try adding it to the path
+%(if it is not already in there). If the folder is not writable, the current folder will be used.
+try
+    ME=[];
+    p=fullfile(GetWritableFolder,'FileExchange','CheckMexCompilerExistence');
+    if isempty(strfind([path ';'],[p ';'])) %#ok<STREMP>
+        %This means f is not on the path.
+        if ~exist(p,'dir'),mkdir(p);end
+        addpath(p,'-end');
+    end
+catch
+    ME=struct('identifier','HJW:CheckMexCompilerExistence:PathFolderFail',...
+        'message','Creating a folder on the path to store compiled mex files failed.');
 end
 end
 function error_(options,varargin)
@@ -776,10 +1025,11 @@ function error_(options,varargin)
 persistent this_fun
 if isempty(this_fun),this_fun=func2str(@error_);end
 
-%Parse options struct.
-if isempty(options),options=struct;end%allow empty input to revert to default
-options=parse_warning_error_redirect_options(options);
-[id,msg,stack,trace]=parse_warning_error_redirect_inputs(varargin{:});
+%Parse options struct, allowing an empty input to revert to default.
+if isempty(options),options=validate_print_to__options(struct);end
+options                   =parse_warning_error_redirect_options(  options  );
+[id,msg,stack,trace,no_op]=parse_warning_error_redirect_inputs( varargin{:});
+if no_op,return,end
 ME=struct('identifier',id,'message',msg,'stack',stack);
 
 %Print to object.
@@ -820,8 +1070,42 @@ end
 %Actually throw the error.
 rethrow(ME)
 end
+function [valid,filename]=filename_is_valid(filename)
+%Check if the file name and path are valid (non-empty char or scalar string).
+valid=true;
+persistent forbidden_names
+if isempty(forbidden_names)
+    forbidden_names={'CON','PRN','AUX','NUL','COM1','COM2','COM3','COM4','COM5','COM6','COM7',...
+        'COM8','COM9','LPT1','LPT2','LPT3','LPT4','LPT5','LPT6','LPT7','LPT8','LPT9'};
+    %ismember is case sensitive, so replicate to include lower case as well
+    forbidden_names=[forbidden_names lower(forbidden_names)];
+end
+if isa(filename,'string') && numel(filename)==1
+    %Convert a scalar string to a char array.
+    filename=char(filename);
+end
+if ~isa(filename,'char') || numel(filename)==0
+    valid=false;return
+else
+    %File name is indeed a char. Check if the folder exists (if specified), and do a check if there
+    %are characters that can't exist in a normal file name. The method used here is not fool-proof,
+    %but should cover most use cases and operating systems.
+    [fullpath,fn,ext]=fileparts(filename);
+    if ~isempty(fullpath) && ~exist(fullpath,'dir')
+        valid=false;return
+    end
+    fn=[fn,ext];
+    
+    if any(ismember([char(0:31) '<>:"/\|?*'],fn)) || ...
+            any(ismember(forbidden_names,fn)) || ...
+            any(fn(end)=='. ')
+        valid=false;return
+    end
+end
+end
 function varargout=findND(X,varargin)
 %Find non-zero elements in ND-arrays. Replicates all behavior from find.
+%
 % The syntax is equivalent to the built-in find, but extended to multi-dimensional input.
 %
 % [...] = findND(X,K) returns at most the first K indices. K must be a positive scalar of any type.
@@ -990,7 +1274,7 @@ end
 str=horzcat(str{:});
 end
 function atomTime=getUTC(override)
-%Returns the UTC time. The value is in Matlab datenum format.
+%Returns the UTC time in the Matlab datenum format
 %
 %example syntax:
 % disp(datestr(getUTC))
@@ -1003,15 +1287,15 @@ function atomTime=getUTC(override)
 % - An implementation using https://www.utctime.net/utc-timestamp.
 %   The NIST has a server that returns the time, but it currently blocks API access.
 %   This method requires internet access.
-% - The local time and timezone offset can be determined with the wmic command (Windows) or the
-%   date command (Linux and Mac).
+% - The local time and timezone offset can be determined with the wmic command or the get-date
+%   Powershell function (Windows) or the date command (Linux and Mac).
 %   To speed up the usage of this method, you can cache the difference with now() in a persistent
 %   variable, that way you avoid the need for a slow system call.
 % 
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 2.0.1                                                         |%
-%|  Date:    2021-05-19                                                    |%
+%|  Version: 2.1.0                                                         |%
+%|  Date:    2022-01-22                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -1026,9 +1310,11 @@ function atomTime=getUTC(override)
 % - The normal system call hangs on ML7.1 on XP. Since ML6.5 works fine on Windows 10, it seems
 %   reasonable to assume that the OS is the cause of the hang. For XP (and older) there is an
 %   alternative strategy in place, but this has a higher likelyhood to fail.
+% - Similarly, as wmic has been deprecated, a Powershell alternative should be used on newer
+%   versions of Windows. The need for this is automatically detected.
 
 if nargin==0
-    %normal flow: first try the cmd method, then the C method, then the web method
+    %Normal flow: first try the cmd method, then the C method, then the web method.
     UTC_epoch_seconds=getUTC_cmd;
     if isempty(UTC_epoch_seconds)
         UTC_epoch_seconds=getUTC_c;
@@ -1042,7 +1328,7 @@ if nargin==0
             'have write access to the current folder and check your internet connection.'])
     end
 else
-    %debug/test, will not throw an error on fail
+    %Override for debug/test, this will not throw an error on fail.
     if override==1
         UTC_epoch_seconds=getUTC_c(false);
     elseif override==2
@@ -1174,56 +1460,94 @@ end
 function UTC_epoch_seconds=getUTC_cmd
 %Use a command line implementation.
 %Should return an empty array instead of an error if it fails.
-persistent WinVer
-if isempty(WinVer)
-    try
-        if ~ispc
-            error('trigger')
-        else
-            [status,str]=system('systeminfo'); %#ok<ASGLU>
-            ind1= 1+strfind(str,':');ind1=ind1(3);
-            ind2=-1+strfind(str,'.');ind2(ind2<ind1)=[];
-            WinVer=str2double(str(ind1:ind2(1)));
-        end
-    catch
-        WinVer=NaN;
-    end
-end
 try
-    if ispc
-        %The normal system call hangs on ML7.1 on XP. Since ML6.5 works fine on Windows 10, I'm
-        %making the assumption that the OS is the cause of the hang.
-        if isnan(WinVer) % str2double must have failed
-            error('trigger')
-        elseif WinVer<=5
-            pausetime=1;
-            fn1=[tempname,'.bat'];fn2=[tempname,'.txt'];
-            fid=fopen(fn1,'w');
-            fprintf(fid,'wmic os get LocalDateTime /value > "%s"\nexit',fn2);
-            fclose(fid);
-            system(['start /min "" cmd /c "' fn1 '"']);
-            pause(pausetime) % Wait for the system call to finish.
-            str=fileread(fn2);
-            try delete(fn1);catch,end
-            try delete(fn2);catch,end
-        else
-            pausetime=0;
-            %This returns YYYYMMDDHHMMSS.milliseconds+UTC_Offset_in_minutes
-            [status,str]=system('wmic os get LocalDateTime /value'); %#ok<ASGLU>
-        end
-        str=str(str>=43 & str<=57); % Strip irrelevant parts.
-        date=mat2cell(str(1:21),1,[4 2 2,2 2 2+1+6]);date=str2double(date);
-        date(5)=date(5)-str2double(str(22:end)); % Add offset.
-        date=num2cell(date);
-        UTC_epoch_seconds=(datenum(date{:})-datenum(1970,1,1))*24*60*60;
-        UTC_epoch_seconds=UTC_epoch_seconds+pausetime;
-    else
-        [status,str]=system('date +%s'); %#ok<ASGLU>
-        UTC_epoch_seconds=str2double(str);
-    end
+    call_type=getUTC_cmd_call_type;
+catch
+    warning('determination of call type failed')
+    UTC_epoch_seconds=[];return
+end
+
+try
+   switch call_type
+       case 'Unix'
+           UTC_epoch_seconds=getUTC_cmd_Unix;
+       case 'WMIC_sys'
+           UTC_epoch_seconds=getUTC_cmd_wmic_sys;
+       case 'WMIC_bat'
+           UTC_epoch_seconds=getUTC_cmd_wmic_bat;
+       case 'PS_get_date'
+           UTC_epoch_seconds=getUTC_cmd_PS_get_date;
+   end
 catch
     UTC_epoch_seconds=[];
 end
+end
+function call_type=getUTC_cmd_call_type
+persistent call_type_
+if isempty(call_type_)
+    if ~ispc
+        call_type_='Unix';
+    else
+        if WinVer<=5
+            %The normal system call hangs on ML7.1 on XP. Since ML6.5 works fine on Windows 10, I'm
+            %making the assumption that the OS is the cause of the hang.
+            call_type_='WMIC_bat';
+        elseif WinVer>=10
+            %The cmd WMIC interface has been deprecated and seems to have been removed from Windows
+            %10 21H1. On older W10 versions we can still use WMIC. Since every version of Windows
+            %will either have the WMIC or PowerShell, a PowerShell call seems like a good fallback.
+            [wmic_not_available,ignore]=system('wmic /?'); %#ok<ASGLU>
+            if wmic_not_available
+                call_type_='PS_get_date';
+            else
+                call_type_='WMIC_sys';
+            end
+        else
+            call_type_='WMIC_sys';
+        end
+    end
+end
+call_type=call_type_;
+end
+function UTC_epoch_seconds=getUTC_cmd_PS_get_date
+%Use Powershell to get the UTC time.
+[s,str]=system(['powershell $a=get-date;',...
+    '$a.ToUniversalTime().ToString(''yyyyMMddHHmmss'')']); %#ok<ASGLU>
+str(str<48 | str>57)='';%Remove trailing newline by keeping only digits.
+date=mat2cell(str,1,[4 2 2,2 2 2]);date=num2cell(str2double(date));
+UTC_epoch_seconds=(datenum(date{:})-datenum(1970,1,1))*24*60*60;
+end
+function UTC_epoch_seconds=getUTC_cmd_Unix
+[status,str]=system('date +%s'); %#ok<ASGLU>
+UTC_epoch_seconds=str2double(str);
+end
+function UTC_epoch_seconds=getUTC_cmd_wmic_bat
+%If a normal system call would hang, use a temporary bat file.
+pausetime=1;
+fn1=[tempname,'.bat'];fn2=[tempname,'.txt'];
+fid=fopen(fn1,'w');
+%This command returns YYYYMMDDHHMMSS.milliseconds+UTC_Offset_in_minutes
+fprintf(fid,'%%systemroot%%\\system32\\wbem\\wmic os get LocalDateTime /value > "%s"\r\nexit',fn2);
+fclose(fid);
+system(['start /min "" cmd /c "' fn1 '"']);
+then=now;%Store the current time to adjust for the pausetime and the function time.
+pause(pausetime) % Wait for the system call to finish.
+str=fileread(fn2);
+try delete(fn1);catch,end,try delete(fn2);catch,end % Delete temp files.
+UTC_epoch_seconds=getUTC_cmd_wmic_parse_str(str)+(now-then)*24*60*60;
+end
+function UTC_epoch_seconds=getUTC_cmd_wmic_sys
+%Use a direct system call (instead of a temporary bat file).
+[status,str]=system('wmic os get LocalDateTime /value'); %#ok<ASGLU>
+%This command returns YYYYMMDDHHMMSS.milliseconds+UTC_Offset_in_minutes
+UTC_epoch_seconds=getUTC_cmd_wmic_parse_str(str);
+end
+function UTC_epoch_seconds=getUTC_cmd_wmic_parse_str(str)
+str=str(str>=43 & str<=57); % Strip irrelevant parts.
+date=mat2cell(str(1:21),1,[4 2 2,2 2 2+1+6]);date=str2double(date);
+date(5)=date(5)-str2double(str(22:end)); % Add offset.
+date=num2cell(date);
+UTC_epoch_seconds=(datenum(date{:})-datenum(1970,1,1))*24*60*60;
 end
 function UTC_epoch_seconds=getUTC_web
 %Read the timestamp from a web server.
@@ -1261,20 +1585,35 @@ catch
 end
 end
 function [f,status]=GetWritableFolder(varargin)
-%Return a folder with write permission.
+%Return a folder with write permission
+%
 % If the output folder doesn't already exist, this function will attempt to create it. This
 % function should provide a reliable and repeatable location to write files.
 %
 % Syntax:
-% f=GetWritableFolder
-% [f,status]=GetWritableFolder
-% [__]=GetWritableFolder(Name,Value)
-% [__]=GetWritableFolder(optionstruct)
-% 
+%   f=GetWritableFolder
+%   [f,status]=GetWritableFolder
+%   [__]=GetWritableFolder(Name,Value)
+%   [__]=GetWritableFolder(options)
+%
+% Input/output arguments:
+% f:
+%   Char array with the full path to the writable folder. This does not contain a trailing filesep.
+% status:
+%   A scalar double ranging from 0 to 3. 0 denotes a failure to find a folder, 1 means the folder
+%   is in a folder close to the AddOn folder, 2 that it is a folder in the tempdir, 3 mean that the
+%   returned path is a folder in the current directory.
+% options:
+%   A struct with Name,Value parameters. Missing parameters are filled with the defaults listed
+%   below. Using incomplete parameter names or incorrect capitalization is allowed, as long as
+%   there is a unique match.
+%
 % Name,Value parameters:
-%    ForceStatus     : Retrieve the path corresponding to the status value (default=0;).
-%                      (0:auto-determine, 1:AddOn, 2:tempdir, 3:pwd)
-%    ErrorOnNotFound : Throw an error when failing to find a writeable folder (default=true;).
+%   ForceStatus:
+%      Retrieve the path corresponding to the status value. Using 0 allows an automatic
+%      determination of the location (default=0;).
+%    ErrorOnNotFound:
+%      Throw an error when failing to find a writeable folder (default=true;).
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
@@ -1301,14 +1640,14 @@ else
     [ForceStatus,ErrorOnNotFound,root_folder_list]=deal(options.ForceStatus,...
         options.ErrorOnNotFound,options.root_folder_list);
 end
-root_folder_list{end}=pwd;%Set this default here to avoid storing it in a persistent.
+root_folder_list{end}=pwd;% Set this default here to avoid storing it in a persistent.
 if ForceStatus
     status=ForceStatus;f=fullfile(root_folder_list{status},'PersistentFolder');
     try if ~exist(f,'dir'),mkdir(f);end,catch,end
     return
 end
 
-%Option 1: use a folder similar to the AddOn Manager.
+% Option 1: use a folder similar to the AddOn Manager.
 status=1;f=root_folder_list{status};
 try if ~exist(f,'dir'),mkdir(f);end,catch,end
 if ~TestFolderWritePermission(f)
@@ -1322,12 +1661,12 @@ if ~TestFolderWritePermission(f)
     end
 end
 
-%Add 'PersistentFolder' to whichever path was determined above.
+% Add 'PersistentFolder' to whichever path was determined above.
 f=fullfile(f,'PersistentFolder');
 try if ~exist(f,'dir'),mkdir(f);end,catch,end
 
 if ~TestFolderWritePermission(f)
-    %Apparently even the pwd isn't writable, so we will either return an error, or a fail state.
+    % Apparently even the pwd isn't writable, so we will either return an error, or a fail state.
     if ErrorOnNotFound
         error('HJW:GetWritableFolder:NoWritableFolder',...
             'This function was unable to find a folder with write permissions.')
@@ -1337,14 +1676,13 @@ if ~TestFolderWritePermission(f)
 end
 end
 function [success,options,ME]=GetWritableFolder_parse_inputs(varargin)
-%Parse the inputs of the GetWritableFolder function.
+%Parse the inputs of the GetWritableFolder function
 % This function returns a success flag, the parsed options, and an ME struct.
 % As input, the options should either be entered as a struct or as Name,Value pairs. Missing fields
 % are filled from the default.
 
-%Pre-assign outputs.
+% Pre-assign outputs.
 success=false;
-options=struct;
 ME=struct('identifier','','message','');
 
 persistent default
@@ -1355,51 +1693,28 @@ if isempty(default)
     default.root_folder_list={...
         GetPseudoAddonpath;
         fullfile(tempdir,'MATLAB');
-        ''};%Overwrite this last element with pwd when called.
+        ''};% Overwrite this last element with pwd when called.
 end
-%The required inputs are checked, so now we need to return the default options if there are no
-%further inputs.
+
 if nargin==2
     options=default;
     success=true;
     return
 end
 
-%Test the optional inputs.
-struct_input=       nargin   ==1 && isa(varargin{1},'struct');
-NameValue_input=mod(nargin,2)==0 && all(...
-    cellfun('isclass',varargin(1:2:end),'char'  ) | ...
-    cellfun('isclass',varargin(1:2:end),'string')   );
-if ~( struct_input || NameValue_input )
-    ME.message=['The input is expected to be either a struct, ',char(10),...
-        'or consist of Name,Value pairs.']; %#ok<CHARTEN>
-    ME.identifier='HJW:GetWritableFolder:incorrect_input_options';
-    return
-end
-if NameValue_input
-    %Convert the Name,Value to a struct.
-    for n=1:2:numel(varargin)
-        try
-            options.(varargin{n})=varargin{n+1};
-        catch
-            ME.message='Parsing of Name,Value pairs failed.';
-            ME.identifier='HJW:GetWritableFolder:incorrect_input_NameValue';
-            return
-        end
-    end
-else
-    options=varargin{1};
-end
-fn=fieldnames(options);
-for k=1:numel(fn)
-    curr_option=fn{k};
+% Actually parse the Name,Value pairs (or the struct).
+[options,replaced]=parse_NameValue(default,varargin{:});
+
+% Test the optional inputs.
+for k=1:numel(replaced)
+    curr_option=replaced{k};
     item=options.(curr_option);
     ME.identifier=['HJW:GetWritableFolder:incorrect_input_opt_' lower(curr_option)];
     switch curr_option
         case 'ForceStatus'
             try
                 if ~isa(default.root_folder_list{item},'char')
-                    %This ensures an error for item=[true false true]; as well.
+                    % This ensures an error for item=[true false true]; as well.
                     error('the indexing must have failed, trigger error')
                 end
             catch
@@ -1419,14 +1734,6 @@ for k=1:numel(fn)
             return
     end
 end
-
-%Fill any missing fields.
-fn=fieldnames(default);
-for k=1:numel(fn)
-    if ~isfield(options,fn(k))
-        options.(fn{k})=default.(fn{k});
-    end
-end
 success=true;ME=[];
 end
 function f=GetPseudoAddonpath
@@ -1438,7 +1745,7 @@ function f=GetPseudoAddonpath
 %     try s = settings;addonpath=s.matlab.addons.InstallationFolder.ActiveValue;end %#ok<TRYNC>
 %
 % However, this returns an inconsistent output:
-%     R2011a:         <pref doesn't exist>
+%     R2011a          <pref doesn't exist>
 %     R2015a Ubuntu  $HOME/Documents/MATLAB/Apps
 %            Windows %HOMEPATH%\MATLAB\Apps
 %     R2018a Ubuntu  $HOME/Documents/MATLAB/Add-Ons
@@ -1461,18 +1768,18 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 % name is used that is not in the dictionary.
 %
 % Syntax:
-% tf=ifversion(test,Rxxxxab)
-% tf=ifversion(test,Rxxxxab,'Octave',test_for_Octave,v_Octave)
+%   tf=ifversion(test,Rxxxxab)
+%   tf=ifversion(test,Rxxxxab,'Octave',test_for_Octave,v_Octave)
 %
-% Output:
-% tf       - If the current version satisfies the test this returns true.
-%            This works similar to verLessThan.
-%
-% Inputs:
-% Rxxxxab - Char array containing a release description (e.g. 'R13', 'R14SP2' or 'R2019a') or the
-%           numeric version.
-% test    - Char array containing a logical test. The interpretation of this is equivalent to
-%           eval([current test Rxxxxab]). For examples, see below.
+% Input/output arguments:
+% tf: 
+%   If the current version satisfies the test this returns true. This works similar to verLessThan.
+% Rxxxxab:
+%   A char array containing a release description (e.g. 'R13', 'R14SP2' or 'R2019a') or the numeric
+%   version (e.g. 6.5, 7, or 9.6).
+% test:
+%   A char array containing a logical test. The interpretation of this is equivalent to
+%   eval([current test Rxxxxab]). For examples, see below.
 %
 % Examples:
 % ifversion('>=','R2009a') returns true when run on R2009a or later
@@ -1488,8 +1795,8 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 1.0.6                                                         |%
-%|  Date:    2021-03-11                                                    |%
+%|  Version: 1.1.0                                                         |%
+%|  Date:    2021-09-26                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -1527,7 +1834,7 @@ if isempty(v_num)
         'R2013a' 801;'R2013b' 802;'R2014a' 803;'R2014b' 804;'R2015a' 805;
         'R2015b' 806;'R2016a' 900;'R2016b' 901;'R2017a' 902;'R2017b' 903;
         'R2018a' 904;'R2018b' 905;'R2019a' 906;'R2019b' 907;'R2020a' 908;
-        'R2020b' 909;'R2021a' 910};
+        'R2020b' 909;'R2021a' 910;'R2021b' 911};
 end
 
 if octave
@@ -1580,15 +1887,24 @@ switch test
     case '>=', tf= v_num >= v;
 end
 end
-function [connected,timing]=isnetavl(test_Matlab_instead_of_system)
-% Check for an internet connection by pinging Google.
-% Optional second output is the ping time (0 if not connected).
+function [connected,timing]=isnetavl(use_HTML_test_only)
+%Check for an internet connection by pinging Google
 %
-% Includes a fallback to HTML if usage of ping is not allowed. This increases the measured ping.
+% Syntax:
+%   [connected,timing]=isnetavl(use_HTML_test_only)
 %
-% If you provide an input, the HTML method will be used, which has the benefit of testing if Matlab
-% (or Octave) is able to connect to the internet. This might be relevant if there are proxy
-% settings or firewall rules specific to Matlab/Octave.
+% Input/output arguments:
+% connected:
+%   A logical denoting the connectivity. Note that this may return unexpected results if Matlab has
+%   separate proxy settings and/or if your DNS is having issues.
+% timing:
+%   This contains the ping time as a double and defaults to 0 if there is no connection.
+%   Note that this value will be larger than the true ping time if the HTML fallback is used.
+% use_HTML_test_only:
+%   If the input is convertible to true the HTML method will be used, which has the benefit of
+%   testing if Matlab (or Octave) is able to connect to the internet. This might be relevant if
+%   there are proxy settings or firewall rules specific to Matlab/Octave.
+%   Note that the ping value will be larger than the true value if the HTML fallback is used.
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
@@ -1608,8 +1924,8 @@ function [connected,timing]=isnetavl(test_Matlab_instead_of_system)
 % - If you have proxy/firewall settings specific to Matlab/Octave, make sure to use the HTML method
 %   by providing an input.
 
-if nargin==0,                                                        tf=false;
-else,[tf1,tf2]=test_if_scalar_logical(test_Matlab_instead_of_system);tf=tf1&&tf2;
+if nargin==0,                                             tf=false;
+else,[tf1,tf2]=test_if_scalar_logical(use_HTML_test_only);tf=tf1&&tf2;
 end
 if tf
     %(the timing is not reliable)
@@ -1734,21 +2050,593 @@ end
 %empty so it is tried next time.
 tf=[];
 end
-function [mex_filename,fun_name]=mexname(fun_name)
-%Encode runtime version information in the function name and append the mex extension.
-%This can be useful if multiple versions of Matlab or Octave need to use the same folder to store
-%compiled functions, while not being compatible.
+function [object,ME]=JSON(str,varargin)
+%This interprets char array as JSON and returns an object the same size and shape as the builtin
 %
-%This function replaces a syntax like mex_filename=[fun_name '.' mexext].
-%Syntax:
-% mex_filename=mexname(fun_name);
-%[mex_filename,updated_fun_name]=mexname(fun_name);
+% For very small files this function may be faster than the builtin, but for large files this
+% function may be much slower. See the performance section in the HTML doc for detailed timing
+% information.
+%
+% Syntax:
+%   object=JSON(str)
+%   object=JSON(___,options)
+%   object=JSON(___,Name,Value)
+%   [object,ME]=JSON(___)
+%
+% object:
+%   This contains the parsed object. This should closely match the output of the Matlab builtin
+%   jsondecode (see below for details).
+% ME:
+%   Errors during parsing will be caught. If a second output argument is specified, the error
+%   will not be rethrown, but the corresponding MException object is returned instead.
+% str:
+%   The JSON string to be parsed. This should be a char vector or a string/cellstr.
+% options:
+%   A struct with Name,Value parameters. Missing parameters are filled with the default.
+%   Note that the parameters are not validated.
+%
+% Name,Value parameters:
+%   EnforceValidNumber:
+%      With this boolean you can turn off the check if a number conforms to the JSON
+%      specifications. This will cause str2double to determine the validity. No error will be
+%      thrown in case of NaN output. [default=true;]
+%   ThrowErrorForInvalid:
+%      If this is false, no error will be throw if parsing fails. Instead, an empty array is
+%      returned. [default=nargout<2;]
+%   MaxRecursionDepth:
+%      This function is a recursive function. Under some rare conditions, Matlab/Octave might crash
+%      when the maximum recursion depth is reached, instead of throwing an error. This parameter
+%      allows you to stay on the safe side.
+%      The value can be set to inf to effectively remove the limit and only rely on the builtin
+%      safeguards. [default=101-numel(dbstack);]
+%
+% This was implemented using
+% https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
+% The failing and passing cases were validated using the test cases from a JSON test suite on
+% GitHub (http://github.com/nst/JSONTestSuite), containing over 300 cases of possibly ambiguous
+% syntax. Because the standard is not explicit for every situation, there are also test cases left
+% to the implementation.
+%
+% Implementation details for compatibility with the jsondecode Matlab function:
+% - If possible an array of arrays is treated as a row-major matrix.
+%   * all data types should match
+%   * all elements must be vectors of the same size
+% - The null literal is an empty double, unless it is an element of an array, in which case it is
+%   parsed as a NaN.
+% - The name of an object is converted to a valid field name with a function similar to genvarname
+%   or matlab.lang.makeValidName. This means characters after some whitespace characters are
+%   converted to uppercase, all whitespace is removed, invalid characters are replaced by an
+%   underscore, and an x is used as a prefix if the resulting name is empty or starts with a number
+%   or underscore. In case of duplicate object names, an underscore and a counter is added. A
+%   char(0) will cause the name to be cropped.
+% - An empty array ('[]') is encoded as an empty double (val=[]).
+% - An empty array array of arrays ('[[]]') is encoded as an empty cell (val={[]}).
+%
+%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
+%|                                                                         |%
+%|  Version: 1.0.1                                                         |%
+%|  Date:    2022-01-22                                                    |%
+%|  Author:  H.J. Wisselink                                                |%
+%|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
+%|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
+%|  Real_email = regexprep(Email,{'*','_'},{'@','.'})                      |%
+%|                                                                         |%
+%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
+%
+% Tested on several versions of Matlab (ML 6.5 and onward) and Octave (4.4.1 and onward), and on
+% multiple operating systems (Windows/Ubuntu/MacOS). For the full test matrix, see the HTML doc.
+% Compatibility considerations:
+% - The recursion depth is limited to 100. This will affect all combinations of nesting of arrays
+%   and objects. Without this, the recursion limit may be reached, causing Matlab/Octave to crash.
+%   Matlab/Octave should prevent this on their own, but this is in place in case that protection
+%   fails. The value can be set to inf to effectively remove the limit and only rely on the builtin
+%   safeguards.
+
+opts=struct;
+opts.EnforceValidNumber=true;
+opts.ThrowErrorForInvalid=nargout<2;
+opts.MaxRecursionDepth=101-numel(dbstack);
+opts=parse_NameValue(opts,varargin{:});
+w=struct;w.w=warning('off','REGEXP:multibyteCharacters');[w.msg,w.ID]=lastwarn;
+try ME=[];
+    notation=StrToNotation(str,opts);
+    object=ParseValue(notation);
+catch ME;if isempty(ME),ME=lasterror;end %#ok<LERR>
+end
+warning(w.w);lastwarn(w.msg,w.ID);%Reset warning state.
+if ~isempty(ME)%An error has occurred.
+    if opts.ThrowErrorForInvalid,rethrow(ME)
+    else,                        object=[]; end
+end
+end
+function notation=StrToNotation(str,opts)
+%Treat the notation as a class, with the following properties (i.e. struct fields):
+%  str : the actual notation input
+%  s_tokens : a copy of str with only the structural tokens
+%  braces : an array encoding the pairs of braces (0 for non-brace characters)
+%  depth : approximate current recursion depth
+%  opts : a struct with options
+%
+% Any whitespace allowed by the specification (i.e. [9 10 13 32]) will be removed outside of the
+% strings to facilitate easier parsing.
+
+if isa(str,'string'),str=cellstr(str);end
+if iscellstr(str),str=sprintf('%s\n',str{:});end
+if ~isa(str,'char') || numel(str)~=length(str)
+    throw_error('The input should be a char vector or a string/cellstr.','Input')
+end
+str=reshape(str,1,[]);%Ensure str is a row vector.
+
+persistent args ws legacy
+if isempty(args)
+    ws=[9 10 13 32];%this is not equal to \s
+    args={['[' char(ws) ']*([\[{\]}:,])[' char(ws) ']*'],'$1','tokenize'};
+    
+    
+    %The 'tokenize' option became the default in R14 (v7).
+    v=version;v(min(find(v=='.')):end)='';pre_v7=str2double(v)<7; %#ok<MXFND>
+    isOctave=exist('OCTAVE_VERSION','builtin')~=0;
+    if ~pre_v7 && ~isOctave
+        args(end)=[];
+    end
+    
+    %Check if the regex crops special characters like char(0).
+    legacy= 3==numel(regexprep(['123' char([0 10])],args{:})) ;
+end
+
+%This is true for the text including the double quotes.
+txt=FindLiteralTextPositions(str);
+
+%Remove whitespace that will not be parsed.
+s_tokens=str;s_tokens(txt)='_';
+if ~legacy
+    s_tokens=regexprep(s_tokens,args{:});
+else
+    %Since the regex crops characters like char(0), we need to apply the regex to a surrogate.
+    tmp=s_tokens;tmp(:)='n';                             %Mark all non-relevant.
+    tmp(ismember(double(s_tokens),ws))='w';              %Mark all whitespace
+    tmp(ismember(double(s_tokens),double('[{}]:,')))='t';%Mark all tokens
+    L=zeros(1,1+numel(tmp));%Extend size by 1 to make cumsum work.
+    [s,e]=regexp(tmp,'w+t');
+    if ~isempty(s),L(s  )=1;L(e  )=-1;end
+    [s,e]=regexp(tmp,'tw+');
+    if ~isempty(s),L(s+1)=1;L(e+1)=-1;end
+    L=logical(cumsum(L));L(end)=[];
+    s_tokens(L)='';
+end
+while numel(s_tokens)>0 && any(s_tokens(end)==ws),s_tokens(end)='';end%Deal with lone values.
+while numel(s_tokens)>0 && any(s_tokens(1)==ws),s_tokens(1)='';end%Deal with lone values.
+
+%Apply whitespace removal to str as well.
+str2=s_tokens;str2(s_tokens=='_')=str(txt);str=str2;
+
+%Leave only structural tokens.
+s_tokens(~ismember(double(s_tokens),double('[{}]:,')))='_';
+
+[braces,ArrayOfArrays]=PairBraces(s_tokens);
+
+notation.str=str;
+notation.s_tokens=s_tokens;
+notation.braces=braces;
+notation.ArrayOfArrays=ArrayOfArrays;
+notation.opts=opts;
+notation.depth=0;
+end
+function txt=FindLiteralTextPositions(str)
+%Characters after an odd number and before an even number double quote are part of a literal text.
+%Since this is only true if there are no escaped double quotes, we need to mask those.
+str=strrep(str,'\"','__');%Mask escaped double quotes.
+L=str=='"';%Find all double quotes.
+x=cumsum(L);%Count prior double quotes.
+txt=L | mod(x,2)~=0;%Find the location of literal text.
+end
+function [braces,ArrayOfArrays]=PairBraces(s_tokens)
+%Pair the braces and brackets and determine which positions are part of an array of arrays.
+
+braces=zeros(size(s_tokens));
+L=s_tokens=='{';
+braces(L)=1:sum(L);
+try
+    L2=find(L);
+    for ind=find(s_tokens=='}')
+        %Equivalent to match=find(L(1:ind),1,'last').
+        ind2=find(L2<ind);ind2=ind2(end);match=L2(ind2);L2(ind2)=[];
+        braces(ind)=-braces(match);
+        L(match)=false;
+    end
+    if any(L),error('trigger'),end
+catch
+    msg='Unmatched braces found.';
+    id='PairBraces';
+    throw_error(msg,id)
+end
+L=s_tokens=='[';
+braces(L)=max(braces)+(1:sum(L));
+try
+    L2=find(L);
+    for ind=find(s_tokens==']')
+        %Equivalent to match=find(L(1:ind),1,'last').
+        ind2=find(L2<ind);ind2=ind2(end);match=L2(ind2);L2(ind2)=[];
+        braces(ind)=-braces(match);
+        L(match)=false;
+    end
+    if any(L),error('trigger'),end
+catch
+    msg='Unmatched braces found.';
+    id='PairBraces';
+    throw_error(msg,id)
+end
+
+ArrayOfArrays=false(1,numel(s_tokens));
+%Keep only the brackets and create a reduced form of the indices of the braces.
+x=s_tokens(ismember(double(s_tokens),double('[{}]')));
+br=braces(braces~=0);
+%Find the starting positions of the array of arrays (i.e. the inner-most '[[').
+[s,e]=regexp(x,'(\[)+\[');e=e-1;
+for n=1:numel(s)
+    %Mark each array of arrays with a counter.
+    ArrayOfArrays(braces==br(e(n)))=true;
+end
+end
+function notation=index(notation,indices)
+%If the second input is a scalar, this is interpreted as indices:end.
+if numel(indices)==1,indices(2)=numel(notation.str);end
+indices=indices(1):indices(2);
+notation.str=notation.str(indices);
+notation.s_tokens=notation.s_tokens(indices);
+notation.braces=notation.braces(indices);
+notation.ArrayOfArrays=notation.ArrayOfArrays(indices);
+end
+function throw_error(msg,id)
+error(['HJW:JSON:' id],msg)
+end
+function val=ParseValue(notation)
+persistent number
+if isempty(number)
+    number=num2cell('-0123456789');
+end
+if numel(notation.str)==0,notation.str=' ';end%This will trigger an error later.
+%Limit recursion depth to avoid crashes.
+notation.depth=notation.depth+1;
+if notation.depth>notation.opts.MaxRecursionDepth
+    throw_error('Recursion limit reached, exiting to avoid crashes.','Recursion')
+end
+
+switch notation.str(1)
+    case '{'
+        val=ParseObject(notation);
+    case '['
+        val=ParseArray(notation);
+    case number
+        val=ParseNumber(notation.str,notation.opts.EnforceValidNumber);
+    case '"'
+        val=ParseString(notation.str);
+        %Avoid 1x0 chars.
+        if numel(val)==0,val='';end
+    case 't'
+        if ~strcmp(notation.str,'true')
+            msg='Unexpected literal, expected ''true''.';
+            id='Literal';
+            throw_error(msg,id)
+        end
+        val=true;
+    case 'f'
+        if ~strcmp(notation.str,'false')
+            msg='Unexpected literal, expected ''false''.';
+            id='Literal';
+            throw_error(msg,id)
+        end
+        val=false;
+    case 'n'
+        if ~strcmp(notation.str,'null')
+            msg='Unexpected literal, expected ''null''.';
+            id='Literal';
+            throw_error(msg,id)
+        end
+        val=[];
+    otherwise
+        msg='Unexpected character, expected a brace, bracket, number, string, or literal.';
+        id='Literal';
+        throw_error(msg,id)
+end
+end
+function val=ParseObject(notation)
+ind=find(notation.braces==-notation.braces(1));%Find the matching closing brace.
+if numel(ind)~=1 || ind~=numel(notation.str) || ~strcmp(notation.str([1 end]),'{}')
+    msg='Unexpected end of object.';
+    id='Object';
+    throw_error(msg,id)
+end
+
+val=struct;
+if ind==2,return,end%Empty object: '{}'.
+
+%Select the part of the notation between the braces.
+to_parse=index(notation,[2 numel(notation.str)-1]);
+
+%Split over the commas that are not inside braces.
+c_ind=find(cumsum(to_parse.braces)==0 & to_parse.s_tokens==',');
+c_ind=[0 c_ind numel(to_parse.str)+1];
+c_ind=[c_ind(1:(end-1))+1;c_ind(2:end)-1];
+
+%Split each pair in the string part and a value.
+brace_content=cell(size(c_ind));
+for n=1:size(c_ind,2)
+    pair=index(to_parse,c_ind(:,n));
+    L=pair.s_tokens==':';
+    if ~any(L),throw_error('No colon found in object definition.','Object'),end
+    ind=find(L);ind=ind(1);
+    try
+        brace_content{1,n}=ParseString(pair.str(1:(ind-1)));
+    catch
+        throw_error('Invalid key in object definition.','Object')
+    end
+    try
+        brace_content{2,n}=ParseValue(index(pair,ind+1));
+    catch
+        throw_error('Invalid value in object definition.','Object')
+    end
+    if isa(brace_content{2,n},'cell')
+        %Wrap in a scalar cell to avoid creating a struct array later.
+        brace_content{2,n}=brace_content(2,n);
+    end
+end
+
+%Determine the fieldnames.
+persistent RE dyn_expr
+if isempty(RE)
+    ws=char([9 10 11 12 13 32]);
+    RE=['[' ws ']+([^' ws '])'];
+    
+    %Dynamically check if the dynamic expression replacement is available. This is possible since
+    %R2006a (v7.2), and has not been implemented yet in Octave 6.2.0.
+    dyn_expr=strcmp('fooBar',regexprep('foo bar',RE,'${upper($1)}'));
+end
+for n=1:size(brace_content,2)
+    fn=brace_content{1,n};
+    if dyn_expr
+        fn=regexprep(fn,RE,'${upper($1)}');%Convert characters after whitespace to upper case.
+    else
+        [s,e]=regexp(fn,RE);
+        if ~isempty(s)
+            fn(e)=upper(fn(e));
+            L=zeros(size(fn));L(s)=1;L(e)=-1;L=logical(cumsum(L));
+            fn(L)='';
+        end
+    end
+    fn=regexprep(fn,'\s','');%Remove all remaining whitespace.
+    x=find(double(fn)==0);if ~isempty(x),fn(x(1):end)='';end%Gobble null characters.
+    fn=regexprep(fn,'[^0-9a-zA-Z_]','_');%Replace remaining invalid characters.
+    if isempty(fn)||any(fn(1)=='_0123456789')
+        fn=['x' fn]; %#ok<AGROW>
+    end
+    fn_=fn;counter=0;
+    while ismember(fn,brace_content(1,1:(n-1)))
+        counter=counter+1;fn=sprintf('%s_%d',fn_,counter);
+    end
+    brace_content{1,n}=fn;
+end
+
+%Store to struct
+val=struct(brace_content{:});
+end
+function str=ParseString(str)
+persistent dict_ dict_2 symbol_length
+if isempty(dict_)
+    symbol_length=zeros(1,double('u'));symbol_length(double('"\/bfnrtu'))=[ones(1,8) 5]+1;
+    dict_={...
+        '"','"';...
+        '\','\';...
+        '/','/';...
+        'b',char(8);...
+        'f',char(12);...
+        'n',char(10);...
+        'r',char(13);...
+        't',char(9)}; %#ok<CHARTEN>
+    dict_2=double([cell2mat(dict_(:,1));'u']);
+    for n=1:size(dict_,1),dict_{n,1}=['\' dict_{n,1}];end
+end
+if ~strcmp(str([1 end]),'""')
+    msg='Unexpected end of string.';
+    id='StringDelim';
+    throw_error(msg,id)
+end
+if any(double(str)<32)
+    msg='Unescaped control character in string.';
+    id='StringControlChar';
+    throw_error(msg,id)
+end
+str=str(2:(end-1));%Remove outer double quotes.
+ind=regexp(str,'\\.');
+if any(ind)
+    %Create a unique list of all replacements. To prevent double replacement, split the str in a
+    %cell and replace each element separately.
+    
+    %Check if there are only valid escaped characters.
+    if ~all(ismember(double(str(ind+1)),dict_2))
+        msg='Unexpected escaped character.';
+        id='StringEscape';
+        throw_error(msg,id)
+    end
+    
+    %Find the true indices (this will properly deal with "\\\u000D").
+    ind=regexp(str,'\\["\\/bfnrtu]');
+    
+    %Find all unicode replacements.
+    ind2=strfind(str,'\u');
+    if ~isempty(ind2)
+        HasUnicode=true;
+        try
+            ind2=bsxfun_plus(ind2.',0:5);
+            U=cellstr(unique(str(ind2),'rows'));
+            for n=1:numel(U)
+                U{n,2}=unicode_to_char(hex2dec(U{n,1}(3:end)));
+            end
+        catch
+            msg='Unexpected escaped character.';
+            id='StringEscape';
+            throw_error(msg,id)
+        end
+    else
+        HasUnicode=false;
+        U=cell(0,2);
+    end
+    dict=[U;dict_];
+    
+    %Encode the length of each segment.
+    len=symbol_length(str(ind+1));
+    len=[0 len;diff([0,ind,1+numel(str)])-[1 len]];
+    str_c=mat2cell(str,1,len(:));
+    str_c=reshape(str_c,2,[]);
+    
+    %Check for \ in normal text, this is probably already caught.
+    if any([str_c{2,:}]=='\')
+        msg='Unexpected escaped character.';
+        id='StringEscape';
+        throw_error(msg,id)
+    end
+    
+    %Keep track of processed elements so we don't do unnecessary work.
+    done=true(size(str_c));
+    done(1,:)=false;
+    done(cellfun('prodofsize',str_c)==0)=true;
+    for n=1:size(dict,1)
+        L=~done & ismember(str_c,dict{n,1});
+        str_c(L)=dict(n,2);
+        done(L)=true;
+        if all(done),break,end
+    end
+    if any(~done)
+        msg='Unexpected escaped character.';
+        id='StringEscape';
+        throw_error(msg,id)
+    end
+    str=horzcat(str_c{:});
+    if HasUnicode && CharIsUTF8
+        %Fix the mis-encoding for surrogate pairs in UTF-16. This is only relevant on runtimes
+        %where char is encoded as UTF-8. Currently, that means this only applies to Octave.
+        [str,ignore_flag]=UTF8_to_unicode(str); %#ok<ASGLU>
+        str=unicode_to_char(UTF16_to_unicode(str));
+    end
+end
+end
+function num=ParseNumber(str,EnforceValidNumber)
+if ~EnforceValidNumber
+    isValidJSON=true;
+else
+    %The complete regexp below doesn't work for some reason, so do it in two passes.
+    %
+    %       ['-?((0)|([1-9]+\d*))(\.\d+)?([eE]' '[\+-]' '?[0-9]+)?']
+    expr{1}=['-?((0)|([1-9]+\d*))(\.\d+)?([eE]'  '\+'   '?[0-9]+)?'];
+    expr{2}=['-?((0)|([1-9]+\d*))(\.\d+)?([eE]'    '-'  '?[0-9]+)?'];
+    if true
+        [s,e]=regexp(str,expr{1},'once');
+        isValidJSON=~isempty(s) && s==1 && e==numel(str);
+    end
+    if ~isValidJSON
+        [s,e]=regexp(str,expr{2},'once');
+        isValidJSON=~isempty(s) && s==1 && e==numel(str);
+    end
+end
+if ~isValidJSON
+    msg='Invalid number format.';
+    id='Number';
+    throw_error(msg,id)
+end
+num=str2double(str);
+end
+function val=ParseArray(notation)
+ind=find(notation.braces==-notation.braces(1));%Find the matching closing bracket.
+if numel(ind)~=1 || ind~=numel(notation.str) || ~strcmp(notation.str([1 end]),'[]')
+    msg='Unexpected end of array.';
+    id='Array';
+    throw_error(msg,id)
+end
+
+if strcmp(notation.str,'[]')
+    %Empty array: '[]'.
+    val=[];return
+end
+if strcmp(notation.str,'[[]]')
+    %Empty array of arrays: '{[]}'.
+    val={[]};return
+end
+
+%Avoid indexing (to select the part of the notation between the brackets).
+br=notation.braces;br(1)=0;
+
+%Split over the commas that are not inside brackets.
+c_ind=find(cumsum(br)==0 & notation.s_tokens==',');
+c_ind=[1 c_ind numel(notation.str)];
+c_ind=[c_ind(1:(end-1))+1;c_ind(2:end)-1];
+if any(diff(c_ind,1,1)<0)
+    msg='Empty array element.';
+    id='Array';
+    throw_error(msg,id)
+end
+val=cell(size(c_ind,2),1);
+for n=1:size(c_ind,2)
+    val{n}=ParseValue(index(notation,c_ind(:,n)));
+end
+
+%An array of arrays should be treated as a row-major matrix.
+%These are the requirements to parse to a matrix:
+% - all data types should match
+% - all elements must be vectors of the same size
+%   (null being NaN instead of [] in the case of a numeric matrix)
+if notation.ArrayOfArrays(1)
+    try
+        tmp=val;
+        tmp(cellfun('isempty',tmp))={NaN};
+        val=horzcat(tmp{:}).';
+        return
+    catch
+        %Revert to cell vector.
+    end
+end
+if ismember(class(val{n}),{'double','logical','struct'})
+    tmp=val;
+    if all(cellfun('isclass',val,'double'))
+        tmp(cellfun('isempty',tmp))={NaN};
+        if numel(unique(cellfun('prodofsize',tmp)))==1
+            val=horzcat(tmp{:}).';
+            return
+        end
+    elseif all(cellfun('isclass',val,'logical'))
+        if numel(unique(cellfun('prodofsize',val)))==1
+            val=horzcat(val{:}).';
+            return
+        end
+    elseif all(cellfun('isclass',val,'struct'))
+        %This will fail for dissimilar structs.
+        try val=vertcat(val{:});catch,end
+    else
+        %Leave as cell vector.
+    end
+end
+end
+function [mex_filename,fun_name]=mexname(fun_name)
+%Encode runtime version information in the function name.
+% This can be useful if multiple versions of Matlab or Octave need to use the
+% same folder to store compiled functions, while not being compatible.
+%
+% This function replaces a syntax like mex_filename=[fun_name '.' mexext].
+%
+% Syntax:
+%   mex_filename=mexname(fun_name);
+%   [mex_filename,updated_fun_name]=mexname(fun_name);
 persistent append
 if isempty(append)
-    v=version;ind=strfind(v,'.');v(ind(2):end)='';v=['v' strrep(v,'.','_')];
+    v=version;ind=[strfind(v,'.') numel(v)];
+    v=sprintf('%02d.%02d',str2double({...
+        v(1:(ind(1)-1)           ) ,...
+        v(  (ind(1)+1):(ind(2)-1)) }));
+    v=['v' strrep(v,'.','_')];
     if ~exist('OCTAVE_VERSION', 'builtin')
+        runtime='MATLAB';
         type=computer;
     else
+        runtime='OCTAVE';
         arch=computer;arch=arch(1:(min(strfind(arch,'-'))-1));
         if ispc
             if strcmp(arch,'x86_64')  ,type= 'win_64';
@@ -1769,25 +2657,94 @@ if isempty(append)
     end
     type=strrep(strrep(type,'.',''),'-','');
     append=cell(2,1);
-    append{1}=['_' v '_' type];
+    append{1}=['_' runtime '_' v '_' type];
     append{2}=[append{1} '.' mexext];
 end
 
 try %Test if fun_name is a valid name.
     if ~isvarname(fun_name),error('trigger catch block'),end
 catch
-    error('HJW:mexname:InvalidName','The provided input can''t be a function name')
+    error('HJW:mexname:InvalidName',...
+        'The provided input can''t be a function name')
 end
 
 mex_filename=[fun_name append{2}];
 fun_name=[fun_name append{1}];
 end
-function [id,msg,stack,trace]=parse_warning_error_redirect_inputs(varargin)
+function [opts,replaced]=parse_NameValue(default,varargin)
+%Match the Name,Value pairs to the default option, ignoring incomplete names and case.
+%
+%If this fails to find a match, this will throw an error with the offending name as the message.
+%
+%The second output is a cell containing the field names that have been set.
+
+opts=default;replaced={};
+if nargin==1,return,end
+
+%Unwind an input struct to Name,Value pairs.
+try
+    struct_input=numel(varargin)==1 && isa(varargin{1},'struct');
+    NameValue_input=mod(numel(varargin),2)==0 && all(...
+        cellfun('isclass',varargin(1:2:end),'char'  ) | ...
+        cellfun('isclass',varargin(1:2:end),'string')   );
+    if ~( struct_input || NameValue_input )
+        error('trigger')
+    end
+    if nargin==2
+        Names=fieldnames(varargin{1});
+        Values=struct2cell(varargin{1});
+    else
+        %Wrap in cellstr to account for strings (this also deals with the fun(Name=Value) syntax).
+        Names=cellstr(varargin(1:2:end));
+        Values=varargin(2:2:end);
+    end
+    if ~iscellstr(Names),error('trigger');end %#ok<ISCLSTR>
+catch
+    %If this block errors, that is either because a missing Value with the Name,Value syntax, or
+    %because the struct input is not a struct, or because an attempt was made to mix the two
+    %styles. In future versions of this functions an effort might be made to handle such cases.
+    error('parse_NameValue:MixedOrBadSyntax',...
+        'Optional inputs must be entered as Name,Value pairs or as struct.')
+end
+
+%Convert the real fieldnames to a char matrix.
+d_Names1=fieldnames(default);d_Names2=lower(d_Names1);
+len=cellfun('prodofsize',d_Names2);maxlen=max(len);
+for n=find(len<maxlen).' %Pad with spaces where needed
+    d_Names2{n}((end+1):maxlen)=' ';
+end
+d_Names2=vertcat(d_Names2{:});
+
+%Attempt to match the names.
+replaced=false(size(d_Names1));
+for n=1:numel(Names)
+    name=lower(Names{n});
+    tmp=d_Names2(:,1:min(end,numel(name)));
+    non_matching=numel(name)-sum(cumprod(double(tmp==repmat(name,size(tmp,1),1)),2),2);
+    match_idx=find(non_matching==0);
+    if numel(match_idx)~=1
+        error('parse_NameValue:NonUniqueMatch',Names{n})
+    end
+    
+    %Store the Value in the output struct.
+    opts.(d_Names1{match_idx})=Values{n};
+    
+    replaced(match_idx)=true;
+end
+replaced=d_Names1(replaced);
+end
+function [id,msg,stack,trace,no_op]=parse_warning_error_redirect_inputs(varargin)
+no_op=false;
 if nargin==1
     %  error_(options,msg)
     %  error_(options,ME)
     if isa(varargin{1},'struct') || isa(varargin{1},'MException')
         ME=varargin{1};
+        if numel(ME)==0
+            no_op=true;
+            [id,msg,stack,trace]=deal('');
+            return
+        end
         try
             stack=ME.stack;%Use the original call stack if possible.
             trace=get_trace(0,stack);
@@ -1821,7 +2778,7 @@ else
         %  error_(options,id,msg,A1,...,An)
         id=varargin{1};
         msg=varargin{2};
-        if nargin>3
+        if nargin>2
             A1_An=varargin(3:end);
             msg=sprintf(msg,A1_An{:});
         end
@@ -1884,73 +2841,91 @@ function data=readfile(filename,varargin)
 %Read a UTF-8 or ANSI (US-ASCII) file
 %
 % Syntax:
-%    data=readfile(filename)
-%    data=readfile(___,options)
-%    data=readfile(___,Name,Value)
-%    filename: char array with either relative or absolute path, or a URL
-%    data: n-by-1 cell (1 cell per line in the file, even empty lines)
-%    options: struct with Name,Value parameters. Missing parameter are filled with the default.
+%   data=readfile(filename)
+%   data=readfile(___,options)
+%   data=readfile(___,Name,Value)
+%
+% Input/output arguments:
+% data:
+%   An n-by-1 cell (1 cell per line in the file, even empty lines).
+% filename:
+%   A char array with either relative or absolute path, or a URL.
+% options:
+%   A struct with Name,Value parameters. Missing parameters are filled with the defaults listed
+%   below. Using incomplete parameter names or incorrect capitalization is allowed, as long as
+%   there is a unique match.
+%   Parameters related to warning/error redirection will be parsed first.
 %
 % Name,Value parameters:
-%  print_to_con : A logical that controls whether warnings and other output will be printed to the
-%           command window. Errors can't be turned off. [default=true;] if either print_to_fid,
-%           print_to_obj, or print_to_fcn is specified then [default=false]
-%  print_to_fid : The file identifier where console output will be printed. Errors and warnings
-%           will be printed including the call stack. You can provide the fid for the command
-%           window (fid=1) to print warnings as text. Errors will be printed to the specified file
-%           before being actually thrown. [default=[];]
-%           If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the
-%           effect of suppressing every output except errors.
-%           This parameter does not affect warnings or errors during input parsing.
-%           Array inputs are allowed.
-%  print_to_obj : The handle to an object with a String property, e.g. an edit field in a GUI where
-%           console output will be printed. Messages with newline characters (ignoring trailing
-%           newlines) will be returned as a cell array. This includes warnings and errors, which
-%           will be printed without the call stack. Errors will be written to the object before the
-%           error is actually thrown. [default=[];]
-%           If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the
-%           effect of suppressing every output except errors.
-%           This parameter does not affect warnings or errors during input parsing.
-%           Array inputs are allowed.
-% print_to_fcn : A struct with a function handle, anonymous function or inline function in the 'h'
-%           field and optionally additional data in the 'data' field. The function should accept
-%           three inputs: a char array (either 'warning' or 'error'), a struct with the message,
-%           id, and stack, and the optional additional data. The function(s) will be run before the
-%           error is actually thrown. [default=[];]
-%           If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the
-%           effect of suppressing every output except errors.
-%           This parameter does not affect warnings or errors during input parsing.
-%           Array inputs are allowed.
-%  err_on_ANSI : If set to true, an error will be thrown when the input file is not recognized as
-%           UTF-8 encoded. This should normally not be an issue, as ANSI files can be read as well
-%           with this function. [default=false;]
-%  EmptyLineRule : This contains a description of how empty lines should be handled. Lines that
-%           only contain whitespace are considered empty as well, to conform to the behavior of
-%           readlines (this therefore also depends on the Whitespace parameter). Valid values are
-%           'read', 'skip', 'error', 'skipleading', and 'skiptrailing'.
-%           The latter two are not available for readlines. Values can be entered as a scalar
-%           string or as a char array. [default='read';]
-%  WhitespaceRule : This contains a description of how should leading and trailing whitespace be
-%           handled on each line. Depending on the value of the Whitespace parameter this is
-%           equivalent to readlines. Valid values are 'preserve', 'trim', 'trimleading', and
-%           'trimtrailing'. [default='preserve';]
-%  LineEnding : This parameter determines which characters are considered line ending characters.
-%           String arrays and cell arrays of char vectors are parsed by sprintf, with each element
-%           being considered a line break. String scalars and character vectors are treated as
-%           literal.
-%           The default is {'\n','\r','\r\n'} meaning that \n\r is considered 2 line ends. This
-%           will not be checked for any overlap and will be processed sequentially. The only is the
-%           default, which will be sorted to {'\r\n','\n','\r'}. [default={'\n','\r','\r\n'};]
-%  Whitespace : This parameter determines which characters are treated as whitespace for the
-%           purposes of EmptyLineRule and WhitespaceRule. This should be a char vector or a scalar
-%           string. Cell arrays of char vectors are parsed by sprintf and concatenated. Note that
-%           the default for readlines is sprintf(' \b\t'), but in this function this is expanded.
-%           [default=[8 9 28:32 160 5760 8192:8202 8239 8287 12288];]
-%  UseReadlinesDefaults : Reproduce the default behavior of readlines as closely as possible. This
-%           includes reproducing a bug which causes all characters that require 2 uint16 values to
-%           encode in UTF-16 (everything outside the base multilingual plane, i.e. most emoji) to
-%           be converted to char(26).
-%           This will not convert the output to a string array. [default=false;]
+%   err_on_ANSI:
+%      If set to true, an error will be thrown when the input file is not recognized as UTF-8
+%      encoded. This should normally not be an issue, as ANSI files can be read as well with this
+%      function. [default=false;]
+%   EmptyLineRule:
+%      This contains a description of how empty lines should be handled. Lines that only contain
+%      whitespace are considered empty as well, to conform to the behavior of readlines (this
+%      therefore also depends on the Whitespace parameter). Valid values are 'read', 'skip',
+%      'error', 'skipleading', and 'skiptrailing'.
+%      The latter two are not available for readlines. Values can be entered as a scalar string or
+%      as a char array. [default='read';]
+%   WhitespaceRule:
+%      This contains a description of how should leading and trailing whitespace be handled on each
+%      line. Depending on the value of the Whitespace parameter this is equivalent to readlines.
+%      Valid values are 'preserve', 'trim', 'trimleading', and 'trimtrailing'.
+%      [default='preserve';]
+%   LineEnding:
+%      This parameter determines which characters are considered line ending characters. String
+%      arrays and cell arrays of char vectors are parsed by sprintf, with each element being
+%      considered a line break. String scalars and character vectors are treated as literal.
+%      The default is {'\n','\r','\r\n'} meaning that \n\r is considered 2 line ends. This will not
+%      be checked for any overlap and will be processed sequentially. The only is the default,
+%      which will be sorted to {'\r\n','\n','\r'}. [default={'\n','\r','\r\n'};]
+%   Whitespace:
+%      This parameter determines which characters are treated as whitespace for the purposes of
+%      EmptyLineRule and WhitespaceRule. This should be a char vector or a scalar string. Cell
+%      arrays of char vectors are parsed by sprintf and concatenated. Note that the default for
+%      readlines is sprintf(' \b\t'), but in this function this is expanded.
+%      [default=[8 9 28:32 160 5760 8192:8202 8239 8287 12288];]
+%   UseReadlinesDefaults:
+%      Reproduce the default behavior of readlines as closely as possible. This includes
+%      reproducing a bug which causes all characters that require 2 uint16 values to encode in
+%      UTF-16 (everything outside the base multilingual plane, i.e. most emoji) to be converted to
+%      char(26).
+%      This will not convert the output to a string array. [default=false;]
+%   print_to_con:
+%      An attempt is made to also use this parameter for warnings or errors during input parsing.
+%      A logical that controls whether warnings and other output will be printed to the command
+%      window. Errors can't be turned off. [default=true;] if either print_to_fid, print_to_obj, or
+%      print_to_fcn is specified then [default=false]
+%   print_to_fid:
+%      An attempt is made to also use this parameter for warnings or errors during input parsing.
+%      The file identifier where console output will be printed. Errors and warnings will be
+%      printed including the call stack. You can provide the fid for the command window (fid=1) to
+%      print warnings as text. Errors will be printed to the specified file before being actually
+%      thrown. [default=[];]
+%      If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
+%      suppressing every output except errors. 
+%      Array inputs are allowed.
+%   print_to_obj:
+%      An attempt is made to also use this parameter for warnings or errors during input parsing.
+%      The handle to an object with a String property, e.g. an edit field in a GUI where console
+%      output will be printed. Messages with newline characters (ignoring trailing newlines) will
+%      be returned as a cell array. This includes warnings and errors, which will be printed
+%      without the call stack. Errors will be written to the object before the error is actually
+%      thrown. [default=[];]
+%      If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
+%      suppressing every output except errors.
+%      Array inputs are allowed.
+%   print_to_fcn:
+%      An attempt is made to also use this parameter for warnings or errors during input parsing.
+%      A struct with a function handle, anonymous function or inline function in the 'h' field and
+%      optionally additional data in the 'data' field. The function should accept three inputs: a
+%      char array (either 'warning' or 'error'), a struct with the message, id, and stack, and the
+%      optional additional data. The function(s) will be run before the error is actually thrown.
+%      [default=[];]
+%      If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
+%      suppressing every output except errors.
+%      Array inputs are allowed.
 %
 % This function is aimed at providing a reliable method of reading a file. The backbone of this
 % function is fread, supplemented by the fileread function. These work in slightly different ways
@@ -2036,15 +3011,16 @@ end
 if ~success
     rethrow(ME)
 else
-    [print_2,legacy,UseURLread,err_on_ANSI,EmptyLineRule,Whitespace,LineEnding,...
+    [filename,print_2,legacy,UseURLread,err_on_ANSI,EmptyLineRule,Whitespace,LineEnding,...
         FailMultiword_UTF16,WhitespaceRule]=...
-        deal(opts.print_2__options,opts.legacy,opts.UseURLread,opts.err_on_ANSI,...
+        deal(opts.filename,opts.print_2__options,opts.legacy,opts.UseURLread,opts.err_on_ANSI,...
         opts.EmptyLineRule,opts.Whitespace,opts.LineEnding,opts.FailMultiword_UTF16,...
         opts.WhitespaceRule);
 end
 
-if isa(filename,'string'),filename=char(filename);end
-if numel(filename)>=8 && ( strcmpi(filename(1:7),'http://') || strcmpi(filename(1:8),'https://') )
+if opts.OfflineFile
+    data=readfile_from_file(filename,LineEnding,print_2,err_on_ANSI);
+else
     if ~legacy.allows_https && strcmpi(filename(1:8),'https://')
         warning_(print_2,'HJW:readfile:httpsNotSupported',...
             ['This implementation of urlread probably doesn''t allow https requests.',char(10),...
@@ -2075,8 +3051,6 @@ if numel(filename)>=8 && ( strcmpi(filename(1:7),'http://') || strcmpi(filename(
             data=char2cellstr(str,LineEnding);
         end
     end
-else
-    data=readfile_from_file(filename,LineEnding,print_2,err_on_ANSI);
 end
 
 %Determine the location of whitespace, but only if relevant.
@@ -2286,11 +3260,19 @@ options=struct;
 ME=struct('identifier','','message','');
 
 %Test the required input.
-
-if ... %Enumerate all possible incorrect inputs.                   %The first input
-        ~( isa(filename,'char') || isa(filename,'string') ) || ... %must be either char or string
-        ( isa(filename,'string') && numel(filename)~=1 )    || ... %if string, must be scalar
-        ( isa(filename,'char')   && numel(filename)==0 )           %if char, must be non-empty.
+[valid,filename]=filename_is_valid(filename);%This will covert string to char.
+try
+    OnlineFile= ...
+        (  strcmpi(filename(1:7),'http://') ...
+        || strcmpi(filename(1:8),'https://'));
+    if OnlineFile
+        %Test if it is long enough to be a proper URL.
+        if numel(filename)<10,error('trigger'),end
+    else
+        %Offline files must adhere to the standards of this check.
+        if ~valid,error('trigger'),end
+    end
+catch
     ME.identifier='HJW:readfile:IncorrectInput';
     ME.message='The file name must be a non-empty char or a scalar string.';
     return
@@ -2343,6 +3325,9 @@ end
 if nargin==1
     options=default;
     success=true;
+    
+    options.OfflineFile=~OnlineFile;
+    options.filename=filename;
     return
 end
 
@@ -2493,6 +3478,9 @@ for k=1:numel(fn)
     end
 end
 
+options.OfflineFile=~OnlineFile;
+options.filename=filename;
+
 if print_2__replace_default_options
     ME.identifier='HJW:readfile:incorrect_input_opt_print_to_';
     [item,ME]=validate_print_to__options(print_2__options,ME);
@@ -2564,7 +3552,7 @@ if isempty(states)
         'enable','disable';...
         'enabled','disabled'};
     try
-        states(end+1,:)=eval('{"on","off"}');
+        states(end+1,:)=eval('{"on","off"}'); %#ok<EVLCS> 
     catch
     end
 end
@@ -2631,7 +3619,7 @@ function str=unicode_to_char(unicode,encode_as_UTF16)
 
 persistent isOctave,if isempty(isOctave),isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;end
 if nargin==1
-    encode_as_UTF16=~isOctave;
+    encode_as_UTF16=~CharIsUTF8;
 end
 if encode_as_UTF16
     if all(unicode<65536)
@@ -2693,6 +3681,7 @@ function str=unicode_to_UTF8(unicode)
 %The value of the input is converted to binary and padded with 0 bits at the front of the string to
 %fill all 'x' positions in the scheme.
 %See https://en.wikipedia.org/wiki/UTF-8
+if numel(unicode)>1,error('this should only be used for single characters'),end
 if unicode<128
     str=unicode;return
 end
@@ -2741,7 +3730,7 @@ word1= find( UTF16>=55296 & UTF16<=56319 );
 word2= find( UTF16>=56320 & UTF16<=57343 );
 try
     d=word2-word1;
-    if any(d~=1)
+    if any(d~=1) || isempty(d)
         error('trigger error')
     end
 catch
@@ -2776,17 +3765,17 @@ end
 end
 function [unicode,isUTF8,assumed_UTF8]=UTF8_to_unicode(UTF8,print_to)
 %Convert UTF-8 to the code points stored as uint32
-%Plane 16 goes up to 10FFFF, so anything larger than uint16 will be able to hold every code point.
+% Plane 16 goes up to 10FFFF, so anything larger than uint16 will be able to hold every code point.
 %
-%If there a second output argument, this function will not return an error if there are encoding
-%error. The second output will contain the attempted conversion, while the first output will
-%contain the original input converted to uint32.
+% If there a second output argument, this function will not return an error if there are encoding
+% error. The second output will contain the attempted conversion, while the first output will
+% contain the original input converted to uint32.
 %
-%The second input can be used to also print the error to a GUI element or to a text file.
+% The second input can be used to also print the error to a GUI element or to a text file.
 if nargin<2,print_to=[];end
 return_on_error= nargout==1 ;
 
-UTF8=uint32(UTF8);
+UTF8=uint32(reshape(UTF8,1,[]));% Force row vector.
 [assumed_UTF8,flag,ME]=UTF8_to_unicode_internal(UTF8,return_on_error);
 if strcmp(flag,'success')
     isUTF8=true;
@@ -2796,11 +3785,10 @@ elseif strcmp(flag,'error')
     if return_on_error
         error_(print_to,ME)
     end
-    unicode=UTF8;%Return input unchanged (apart from casting to uint32).
+    unicode=UTF8; % Return input unchanged (apart from casting to uint32).
 end
 end
 function [UTF8,flag,ME]=UTF8_to_unicode_internal(UTF8,return_on_error)
-
 flag='success';
 ME=struct('identifier','HJW:UTF8_to_unicode:notUTF8','message','Input is not UTF-8.');
 
@@ -2838,12 +3826,12 @@ for bytes=4:-1:2
         S2=mat2cell(multibyte,ones(size(multibyte,1),1),bytes);
         for n=1:numel(S2)
             bin=dec2bin(double(S2{n}))';
-            %To view the binary data, you can use this: bin=bin(:)';
-            %Remove binary header (3 byte example):
-            %1110xxxx10xxxxxx10xxxxxx
-            %    xxxx  xxxxxx  xxxxxx
+            % To view the binary data, you can use this: bin=bin(:)';
+            % Remove binary header (3 byte example):
+            % 1110xxxx10xxxxxx10xxxxxx
+            %     xxxx  xxxxxx  xxxxxx
             if ~strcmp(header_bits,bin(header_locs))
-                %Check if the byte headers match the UTF-8 standard.
+                % Check if the byte headers match the UTF-8 standard.
                 flag='error';
                 if return_on_error,return,end
                 continue %leave unencoded
@@ -2852,34 +3840,34 @@ for bytes=4:-1:2
             if ~isOctave
                 S3=uint32(bin2dec(bin  ));
             else
-                S3=uint32(bin2dec(bin.'));%Octave needs an extra transpose.
+                S3=uint32(bin2dec(bin.'));% Octave needs an extra transpose.
             end
-            %Perform actual replacement.
+            % Perform actual replacement.
             UTF8=PatternReplace(UTF8,S2{n},S3);
         end
     end
 end
 end
 function [opts,ME]=validate_print_to__options(opts_in,ME)
-%If any input is invalid, this returns an empty array and sets ME.message.
+% If any input is invalid, this returns an empty array and sets ME.message.
 %
-%Input struct:
-%options.print_to_con=true;   % or false
-%options.print_to_fid=fid;    % or []
-%options.print_to_obj=h_obj;  % or []
-%options.print_to_fcn=struct; % or []
+% Input struct:
+% options.print_to_con=true;   % or false
+% options.print_to_fid=fid;    % or []
+% options.print_to_obj=h_obj;  % or []
+% options.print_to_fcn=struct; % or []
 %
-%Output struct:
-%options.fid
-%options.obj
-%options.fcn.h
-%options.fcn.data
-%options.boolean.con
-%options.boolean.fid
-%options.boolean.obj
-%options.boolean.fcn
+% Output struct:
+% options.fid
+% options.obj
+% options.fcn.h
+% options.fcn.data
+% options.boolean.con
+% options.boolean.fid
+% options.boolean.obj
+% options.boolean.fcn
 
-%Set defaults.
+% Set defaults.
 if nargin<2,ME=struct;end
 if ~isfield(opts_in,'print_to_con'),opts_in.print_to_con=[];end
 if ~isfield(opts_in,'print_to_fid'),opts_in.print_to_fid=[];end
@@ -2887,13 +3875,14 @@ if ~isfield(opts_in,'print_to_obj'),opts_in.print_to_obj=[];end
 if ~isfield(opts_in,'print_to_fcn'),opts_in.print_to_fcn=[];end
 print_to_con_default=true; % Unless a valid fid, obj, or fcn is specified.
 
-%Initalize output.
+% Initialize output.
 opts=struct;
 
-%Parse the fid. We can use ftell to determine if fprintf is going to fail.
+% Parse the fid. We can use ftell to determine if fprintf is going to fail.
 item=opts_in.print_to_fid;
 if isempty(item)
     opts.boolean.fid=false;
+    opts.fid=[];
 else
     print_to_con_default=false;
     opts.boolean.fid=true;
@@ -2908,20 +3897,21 @@ else
     end
 end
 
-%Parse the object handle. Retrieving from multiple objects at once works, but writing that output
-%back to multiple objects doesn't work if Strings are dissimilar.
+% Parse the object handle. Retrieving from multiple objects at once works, but writing that output
+% back to multiple objects doesn't work if Strings are dissimilar.
 item=opts_in.print_to_obj;
 if isempty(item)
     opts.boolean.obj=false;
+    opts.obj=[];
 else
     print_to_con_default=false;
     opts.boolean.obj=true;
     opts.obj=item;
     for n=1:numel(item)
         try
-            txt=get(item(n),'String'    ); %See if this triggers an error.
-            set(    item(n),'String','' ); %Test if property is writeable.
-            set(    item(n),'String',txt); %Restore original content.
+            txt=get(item(n),'String'    ); % See if this triggers an error.
+            set(    item(n),'String','' ); % Test if property is writable.
+            set(    item(n),'String',txt); % Restore original content.
         catch
             ME.message=['Invalid print_to_obj parameter:',char(10),...
                 'should be a handle to an object with a writeable String property.']; %#ok<CHARTEN>
@@ -2930,16 +3920,16 @@ else
     end
 end
 
-%Parse the function handles.
+% Parse the function handles.
 item=opts_in.print_to_fcn;
 if isempty(item)
     opts.boolean.fcn=false;
+    opts.fcn=[];
 else
     print_to_con_default=false;
     try
         for n=1:numel(item)
-            if ~ismember(class(item(n).h),{'function_handle','inline'}) ...
-                    || numel(item(n).h)~=1
+            if ~ismember(class(item(n).h),{'function_handle','inline'}) || numel(item(n).h)~=1
                 error('trigger error')
             end
         end
@@ -2951,8 +3941,8 @@ else
     end
 end
 
-%Parse the logical that determines if a warning will be printed to the command window.
-%This is true by default, unless an fid, obj, or fcn is specified.
+% Parse the logical that determines if a warning will be printed to the command window.
+% This is true by default, unless an fid, obj, or fcn is specified.
 item=opts_in.print_to_con;
 if isempty(item)
     opts.boolean.con=print_to_con_default;
@@ -2973,6 +3963,8 @@ function varargout=var2str(varargin)
 % out=cell(1,2);
 % foo=1;bar=2;
 % [out{:}]=var2str(foo,bar);
+
+%One-line alternative: function out=var2str(varargin),out=inputname(1);end
 err_flag= nargin~=max(1,nargout) ;
 if ~err_flag
     varargout=cell(nargin,1);
@@ -2986,18 +3978,18 @@ if err_flag
 end
 end
 function warning_(options,varargin)
-%Print a warning to the command window, a file and/or the String property of an object.
-%The lastwarn state will be set if the warning isn't thrown with warning().
-%The printed call trace omits this function, but the warning() call does not.
+%Print a warning to the command window, a file and/or the String property of an object
+% The lastwarn state will be set if the warning isn't thrown with warning().
+% The printed call trace omits this function, but the warning() call does not.
 %
-%You can also provide a struct (scalar or array) with two fields: 'h' with a function handle, and
-%'data' with arbitrary data passed as third input. These functions will be run with 'warning' as
-%first input. The second input is a struct with identifier, message, and stack as fields. This
-%function will be run with feval (meaning the function handles can be replaced with inline
-%functions or anonymous functions).
+% You can also provide a struct (scalar or array) with two fields: 'h' with a function handle, and
+% 'data' with arbitrary data passed as third input. These functions will be run with 'warning' as
+% first input. The second input is a struct with identifier, message, and stack as fields. This
+% function will be run with feval (meaning the function handles can be replaced with inline
+% functions or anonymous functions).
 %
-%The intention is to allow replacement of most warning(___) call with warning_(options,___). This
-%does not apply to calls that query or set the warning state.
+% The intention is to allow replacement of most warning(___) call with warning_(options,___). This
+% does not apply to calls that query or set the warning state.
 %
 %options.boolean.con: if true print warning to command window with warning()
 %options.fid:         file identifier for fprintf (array input will be indexed)
@@ -3009,12 +4001,12 @@ function warning_(options,varargin)
 %options.fcn.data:    data passed as third input to function to be run (optional)
 %options.boolean.fnc: if true the function(s) will be run
 %
-%syntax:
-%  warning_(options,msg)
-%  warning_(options,msg,A1,...,An)
-%  warning_(options,id,msg)
-%  warning_(options,id,msg,A1,...,An)
-%  warning_(options,ME)               %rethrow error as warning
+% Syntax:
+%   warning_(options,msg)
+%   warning_(options,msg,A1,...,An)
+%   warning_(options,id,msg)
+%   warning_(options,id,msg,A1,...,An)
+%   warning_(options,ME)               %rethrow error as warning
 %
 %examples options struct:
 %  % Write to a log file:
@@ -3027,11 +4019,16 @@ function warning_(options,varargin)
 persistent this_fun
 if isempty(this_fun),this_fun=func2str(@warning_);end
 
-%Parse options struct.
-if isempty(options),options=struct;end%allow empty input to revert to default
-options=parse_warning_error_redirect_options(options);
-[id,msg,stack,trace]=parse_warning_error_redirect_inputs(varargin{:});
+[id,msg,stack,trace,no_op]=parse_warning_error_redirect_inputs( varargin{:});
+if no_op,return,end % Don't waste time parsing the options in case of a no-op.
 ME=struct('identifier',id,'message',msg,'stack',stack);
+
+% Parse options struct, allowing an empty input to revert to default.
+if isempty(options),options=validate_print_to__options(struct);end
+options                   =parse_warning_error_redirect_options(  options  );
+
+% Check if the warning is turned off and exit the function if this is the case.
+w=warning;if any(ismember({w(ismember({w.identifier},{id,'all'})).state},'off')),return,end
 
 if options.boolean.con
     if ~isempty(id),warning(id,'%s',msg),else,warning(msg), end
@@ -3052,11 +4049,6 @@ if options.boolean.obj
     end
 end
 
-if options.boolean.fid || options.boolean.fcn
-    skip_layers=2;%Remove this function and the get_trace function from the trace.
-    [trace,stack]=get_trace(skip_layers);
-end
-
 if options.boolean.fid
     for FID=options.fid(:).'
         try fprintf(FID,'Warning: %s\n%s',msg,trace);catch,end
@@ -3065,7 +4057,7 @@ end
 
 if options.boolean.fcn
     if ismember(this_fun,{stack.name})
-        %To prevent an infinite loop, trigger an error.
+        % To prevent an infinite loop, trigger an error.
         error('prevent recursion')
     end
     for FCN=options.fcn(:).'
@@ -3155,110 +4147,47 @@ midpoint=datestr(midpoint,'yyyymmddTHHMMSS');
 midpoint(9)='';
 bounds=[lower_bound upper_bound];
 end
-function [success,options,ME]=WBM_parse_inputs(filename,url,varargin)
-%Parse the inputs of the WBM function.
-% This function returns a success flag, the parsed options, and an ME struct.
-% As input, the options should either be entered as a struct or as Name,Value pairs. Missing fields
-% are filled from the default.
-
-%Pre-assign outputs.
-success=false;
-options=struct;
+function [success,opts,ME]=WBM_parse_inputs(filename,url,varargin)
+%The print_to variable will be parsed first. If the parsing of print_to fails, an empty double will
+%be returned.
+success=false;opts=struct;
 ME=struct('identifier','','message','');
 
+%Attempt to match the struct to the available options. This will return a struct with the same
+%fields as the default option struct.
+try ME_=[];[opts,replaced]=parse_NameValue(WBM_parse_inputs_defaults,varargin{:}); %#ok<NASGU>
+catch ME_;if isempty(ME_),ME_=lasterror;end,ME=ME_;return,end %#ok<LERR>
+%Add the required inputs to the struct.
+opts.filename=filename;opts.url=url;
+
+%Attempt to parse the error redirection options (this generates ME.message on fail).
+[opts.print_to,ME]=validate_print_to__options(opts,ME);
+if isempty(opts.print_to)
+    ME.identifier='HJW:WBM:Incorrect_print_to_option';return
+end
+
 %Test the required inputs.
-if ~ischar(filename) || numel(filename)==0
+[valid,opts.filename]=filename_is_valid(opts.filename);
+if ~valid
     ME.message='The first input (filename) is not char and/or empty.';
     ME.identifier='HJW:WBM:incorrect_input_filename';
     return
 end
-if ~ischar(url) || numel(url)==0
+if ~ischar(opts.url) || numel(opts.url)==0
     ME.message='The second input (url) is not char and/or empty.';
     ME.identifier='HJW:WBM:incorrect_input_url';
     return
 end
 
-persistent default
-default__m_date_r__changed=false;
-if isempty(default)
-    %Set defaults for options.
-    default.date_part='2';%Load the date the closest to 2499-12-31 11:59:59.
-    default.tries=[5 4 4];%These are the [loads saves timeouts] allowed.
-    default.response={...
-        'tx',404,'load'; %A 404 may also occur after a successful save.
-        'txtx',[404 404],'save';
-        'tx',403,'save';
-        't2t2',[403 403],'exit'; %The page likely doesn't support the WBM.
-        'tx',429,'pause_retry'...%Server is overloaded, wait a while and retry.
-        };
-    default.ignore=4080;
-    default.verbose=3;
-    default.UTC_failed='warn_3'; %Unsused in default, but used when parsing options.
-    default.UTC_fail_response='warn';
-    default.m_date_r=1;%This selects 'warning' as default behavior.
-    default.flag='*';
-    default.UseLocalTime=false;
-    %The websave function was introduced in R2014b (v8.4) and isn't built into Octave (webread was
-    %introduced in 6.1.0, but websave not yet). As an undocumented feature, this can be forced to
-    %true, which causes urlwrite to be used, even if websave is available. A check is in place to
-    %prevent the reverse.
-    try no_websave=isempty(which(func2str(@websave)));catch,no_websave=true;end
-	default.UseURLwrite=no_websave;%(allows user-implementation in subfunction)
-    default.err429=struct('CountsAsTry',false,'TimeToWait',15,'PrintAtVerbosityLevel',3);
-    default.waittime=60;
-    default.timeout=10;
-    default.print_2__options=validate_print_to__options(struct,ME);
-    
-    %(note for future edits: this code also exists in two parts elsewhere in this function)
-    [bounds,midpoint]=WBM_parse_date_to_range(default.date_part);
-    default.date_part=midpoint;default.date_bounds.datenum=bounds;
-    item={datestr(bounds(1),'yyyymmddTHHMMSS'),datestr(bounds(2),'yyyymmddTHHMMSS')};
-    item{1}(9)='';item{2}(9)='';
-    default.date_bounds.double=[str2double(item{1}) str2double(item{2})];
-    
-    default.RunAsDate__fix=false;
-end
-%The required inputs are checked, so now we need to return the default options if there are no
-%further inputs.
-if nargin==2
-    options=default;
-    success=true;
-    return
-end
+if numel(replaced)==0,success=true;ME=[];return,end % no default values were changed
 
-%Test the optional inputs.
-struct_input=nargin==3 && isa(varargin{1},'struct');
-NameValue_input=mod(nargin,2)==0 && all(...
-    cellfun('isclass',varargin(1:2:end),'char'  ) | ...
-    cellfun('isclass',varargin(1:2:end),'string')   );
-if ~( struct_input || NameValue_input )
-    ME.message=['The third input (options) is expected to be either a struct, ',char(10),...
-        'or consist of Name,Value pairs.']; %#ok<CHARTEN>
-    ME.identifier='HJW:WBM:incorrect_input_options';
-    return
-end
-%Do some special parsing for the print_2__options
-print_2__replace_default_options=false;print_2__options=struct;
-if NameValue_input
-    %Convert the Name,Value to a struct.
-    for n=1:2:numel(varargin)
-        try
-            options.(varargin{n})=varargin{n+1};
-        catch
-            ME.message='Parsing of Name,Value pairs failed.';
-            ME.identifier='HJW:WBM:incorrect_input_NameValue';
-            return
-        end
-    end
-else
-    options=varargin{1};
-end
-fn=fieldnames(options);
-for k=1:numel(fn)
-    curr_option=fn{k};
-    item=options.(curr_option);
-    ME.identifier=['HJW:WBM:incorrect_input_opt_' lower(curr_option)];
-    switch curr_option
+%Check optional inputs
+default=WBM_parse_inputs_defaults;
+for k=1:numel(replaced)
+    item=opts.(replaced{k});
+    switch replaced{k}
+        case {'print_to_con','print_to_fid','print_to_obj','print_to_fcn'}
+            %Already checked
         case 'date_part'
             valid_date=true;
             if  ~ischar(item) || numel(item)==0 || numel(item)>14 || any(item<48 & item>57)
@@ -3270,8 +4199,8 @@ for k=1:numel(fn)
                 ME.message='The value of options.date_part is empty or not a valid numeric char.';
                 return
             end
-            options.date_part=midpoint;
-            options.date_bounds.datenum=bounds;
+            opts.date_part=midpoint;
+            opts.date_bounds.datenum=bounds;
             %Note: options.date_bounds.double is set later
         case 'tries'
             if ~isnumeric(item) || numel(item)~=3 || any(isnan(item))
@@ -3302,7 +4231,6 @@ for k=1:numel(fn)
                 ME.message='Options.m_date_r should be ''ignore'', ''warning'', or ''error''.';
                 return
             end
-            default__m_date_r__changed=true;
             switch lower(item)
                 case 'ignore'
                     item=0;
@@ -3314,14 +4242,14 @@ for k=1:numel(fn)
                     ME.message='Options.m_date_r should be ''ignore'', ''warning'', or ''error''.';
                     return
             end
-            options.m_date_r=item;
+            opts.m_date_r=item;
         case 'flag'
             if ischar(item)&&numel(item)~=0&&~ismember({item},{'*','id','js','cs','im','if','fw'})
                 ME.message='Invalid flag. Must be a char with *, id, js, cs, im, fw, or if.';
                 return
             end
         case 'UseLocalTime'
-            [passed,options.UseLocalTime]=test_if_scalar_logical(item);
+            [passed,opts.UseLocalTime]=test_if_scalar_logical(item);
             if ~passed
                 ME.message='UseLocalTime should be either true or false';
                 return
@@ -3333,14 +4261,14 @@ for k=1:numel(fn)
                 return
             end
             %Force the use of urlwrite if websave is not available.
-            options.UseURLwrite=item || default.UseURLwrite;
+            opts.UseURLwrite=item || default.UseURLwrite;
         case 'err429'
             if ~isa(item,'struct')
                 ME.message='The err429 parameter should be a struct.';
                 return
             end
             %Loop through the fields in the input and overwrite defaults.
-            options.err429=default.err429;fn_=fieldnames(item);
+            opts.err429=default.err429;fn_=fieldnames(item);
             for n=1:numel(fn_)
                 item_=item.(fn_{n});
                 switch lower(fn_{n})
@@ -3351,7 +4279,7 @@ for k=1:numel(fn)
                                 char(10),'should be a logical scalar.']; %#ok<CHARTEN>
                             return
                         end
-                        options.err429.CountsAsTry=item_;
+                        opts.err429.CountsAsTry=item_;
                     case 'timetowait'%'TimeToWait'
                         if ~isnumeric(item_) || numel(item_)~=1
                             ME.message=['Invalid field TimeToWait in the err429 parameter:',...
@@ -3360,7 +4288,7 @@ for k=1:numel(fn)
                         end
                         %Under some circumstances this value is divided, so it has to be converted
                         %to a float type.
-                        options.err429.TimeToWait=double(item_);
+                        opts.err429.TimeToWait=double(item_);
                     case 'printatverbositylevel'%'PrintAtVerbosityLevel'
                         if ~isnumeric(item_) || numel(item_)~=1 || ...
                                 double(item_)~=round(double(item_))
@@ -3368,28 +4296,20 @@ for k=1:numel(fn)
                                 'parameter:',char(10),'should be a scalar double integer.']; %#ok<CHARTEN>
                             return
                         end
-                        options.err429.PrintAtVerbosityLevel=item_;
+                        opts.err429.PrintAtVerbosityLevel=item_;
                     otherwise
-                        warning('HJW:WBM:NameValue_not_found',['Name,Value pair not ',...
-                            'recognized during parsing of err429 parameter: %s'],fn_{n});
+                        warning_(opts.print_to,'HJW:WBM:NameValue_not_found',...
+                            ['Name,Value pair not recognized during parsing of err429 ',...
+                            'parameter:\n    %s'],fn_{n});
                 end
             end
-        case 'print_to_fid'
-            print_2__replace_default_options=true;
-            print_2__options.print_to_fid=item;
-        case 'print_to_obj'
-            print_2__replace_default_options=true;
-            print_2__options.print_to_obj=item;
-        case 'print_to_con'
-            print_2__replace_default_options=true;
-            print_2__options.print_to_con=item;
         case 'waittime'
             try item=double(item);catch,end
             if ~isa(item,'double') || numel(item)~=1 || item<0
                 ME.message='The waittime parameter should be a scalar convertible to double.';
                 return
             end
-            options.waittime=item;
+            opts.waittime=item;
         case 'if_UTC_failed'
             valid={'error','ignore','warn_0','warn_1','warn_2','warn_3'};
             if isa(item,'string'),item=char(item);end
@@ -3398,7 +4318,7 @@ for k=1:numel(fn)
                     'See the documentation for valid values.']; %#ok<CHARTEN>
                 return
             end
-            options.UTC_failed=lower(item);
+            opts.UTC_failed=lower(item);
         case 'RunAsDate__fix'
             %Undocumented. You should probably not change this default.
             [passed,item]=test_if_scalar_logical(item);
@@ -3406,7 +4326,7 @@ for k=1:numel(fn)
                 ME.message='RunAsDate__fix is expected to be a scalar logical.';
                 return
             end
-            options.RunAsDate__fix=item;
+            opts.RunAsDate__fix=item;
         case 'timeout'
             try
                 item=double(item);
@@ -3417,43 +4337,21 @@ for k=1:numel(fn)
                 ME.message='The timeout parameter should be a positive numeric scalar.';
                 return
             end
-            options.timeout=item;
-        otherwise
-            ME.message=sprintf('Name,Value pair not recognized: %s',curr_option);
-            ME.identifier='HJW:WBM:incorrect_input_NameValue';
-            return
-    end
-end
-
-if print_2__replace_default_options
-    ME.identifier='HJW:WBM:incorrect_input_opt_print_to_';
-    [item,ME]=validate_print_to__options(print_2__options,ME);
-    if isempty(item),return,end
-    options.print_2__options=item;
-else
-    %If none of them were set, we can use the defaults.
-    options.print_2__options=default.print_2__options;
-end
-
-%Fill any missing fields.
-fn=fieldnames(default);
-for k=1:numel(fn)
-    if ~isfield(options,fn(k))
-        options.(fn{k})=default.(fn{k});
+            opts.timeout=item;
     end
 end
 
 %Set the behavior based on the UTC_failed setting and the verbosity.
-if strcmp(options.UTC_failed,'error')
-    options.UTC_fail_response='error';
-elseif strcmp(options.UTC_failed,'ignore')
-    options.UTC_fail_response='ignore';
+if strcmp(opts.UTC_failed,'error')
+    opts.UTC_fail_response='error';
+elseif strcmp(opts.UTC_failed,'ignore')
+    opts.UTC_fail_response='ignore';
 else
-    level=str2double(strrep(options.UTC_failed,'warn_',''));
-    if options.verbose>=level
-        options.UTC_fail_response='warn';
+    level=str2double(strrep(opts.UTC_failed,'warn_',''));
+    if opts.verbose>=level
+        opts.UTC_fail_response='warn';
     else
-        options.UTC_fail_response='ignore';
+        opts.UTC_fail_response='ignore';
     end
 end
 
@@ -3463,48 +4361,94 @@ end
 %function), the bounds need to be adjusted if the local time was used to determine the bounds.
 currentUTC=WBM_getUTC_local;
 if currentUTC==0,currentUTC=now;end % This will be dealt with elsewhere if needed.
-if options.UseLocalTime
+if opts.UseLocalTime
     %Shift the bounds (which are currently in the local time) to UTC.
     timezone_offset=currentUTC-now;
-    if options.RunAsDate__fix && abs(timezone_offset)>(14.1/24)
+    if opts.RunAsDate__fix && abs(timezone_offset)>(14.1/24)
         %This means Matlab does not know the correct time, as timezones range from -12 to +14.
         %Round down to true timezone offset. This is generally not what you would want.
         timezone_offset=rem(timezone_offset,1);
     end
     %Round the offset to 15 minutes (the maximum resolution of timezones).
     timezone_offset=round(timezone_offset*24*4)/(24*4);
-    options.date_bounds.datenum=options.date_bounds.datenum-timezone_offset;
-    bounds=options.date_bounds.datenum;
+    opts.date_bounds.datenum=opts.date_bounds.datenum-timezone_offset;
+    bounds=opts.date_bounds.datenum;
 else
     %The date_part is in already in UTC.
-    bounds=options.date_bounds.datenum;
+    bounds=opts.date_bounds.datenum;
 end
 %ML6.5 needs a specific format from a short list, the closest to the needed format (yyyymmddHHMMSS)
 %is ISO 8601 (yyyymmddTHHMMSS).
 item={datestr(bounds(1),'yyyymmddTHHMMSS'),datestr(bounds(2),'yyyymmddTHHMMSS')};
 item{1}(9)='';item{2}(9)='';%Remove the T.
-options.date_bounds.double=[str2double(item{1}) str2double(item{2})];
+opts.date_bounds.double=[str2double(item{1}) str2double(item{2})];
 if ~( bounds(1)<=currentUTC && currentUTC<=bounds(2) )
     %No saves allowed, because datepart doesn't match today.
-    options.tries(2)=0;
+    opts.tries(2)=0;
 end
 
 %If the m_date_r is set to error and the flag is set to something other than '*' the check_date
 %function will return an error, regardless of the date stamp of the file.
 %If that is the case, throw an error here.
-if options.m_date_r==2 && ~strcmp(options.flag,'*')
+if opts.m_date_r==2 && ~strcmp(opts.flag,'*')
     ME.message=['m_date_r set to ''error'' and the flag set to something other than ''*'' will',...
         char(10),'by definition cause an error, as the downloaded pages will not contain any',...
         char(10),'dates. See the help text for a work-around for images.']; %#ok<CHARTEN>
     ME.identifier='HJW:WBM:IncompatibleInputs';
     return
 end
-if ~default__m_date_r__changed && ~strcmp(options.flag,'*')
+if ~ismember('m_date_r',replaced) && ~strcmp(opts.flag,'*')
     %If the default is not changed, but the flag is set to something else than '*', then the
     %m_date_r should be set to 0 (ignore).
-    options.m_date_r=0;
+    opts.m_date_r=0;
 end
 success=true;ME=[];
+end
+function opts=WBM_parse_inputs_defaults
+%Create a struct with default values.
+persistent opts_
+if isempty(opts_)
+    opts_=struct;
+    opts_.date_part='2';%Load the date the closest to 2499-12-31 11:59:59.
+    opts_.tries=[5 4 4];%These are the [loads saves timeouts] allowed.
+    opts_.response={...
+        'tx',404,'load'; %A 404 may also occur after a successful save.
+        'txtx',[404 404],'save';
+        'tx',403,'save';
+        't2t2',[403 403],'exit'; %The page likely doesn't support the WBM.
+        'tx',429,'pause_retry'...%Server is overloaded, wait a while and retry.
+        };
+    opts_.ignore=4080;
+    opts_.verbose=3;
+    opts_.UTC_failed='warn_3'; %Unused in default, but used when parsing options.
+    opts_.UTC_fail_response='warn';
+    opts_.m_date_r=1;%This selects 'warning' as default behavior.
+    opts_.flag='*';
+    opts_.UseLocalTime=false;
+    %The websave function was introduced in R2014b (v8.4) and isn't built into Octave (webread was
+    %introduced in 6.1.0, but websave not yet). As an undocumented feature, this can be forced to
+    %true, which causes urlwrite to be used, even if websave is available. A check is in place to
+    %prevent the reverse.
+    try no_websave=isempty(which(func2str(@websave)));catch,no_websave=true;end
+	opts_.UseURLwrite=no_websave;%(allows user-implementation in subfunction)
+    opts_.err429=struct('CountsAsTry',false,'TimeToWait',15,'PrintAtVerbosityLevel',3);
+    opts_.waittime=60;
+    opts_.timeout=10;
+    opts_.print_to_con=[];
+    opts_.print_to_fid=[];
+    opts_.print_to_obj=[];
+    opts_.print_to_fcn=[];
+    
+    %(note for future edits: this code also exists in two parts elsewhere in this function)
+    [bounds,midpoint]=WBM_parse_date_to_range(opts_.date_part);
+    opts_.date_part=midpoint;opts_.date_bounds.datenum=bounds;
+    item={datestr(bounds(1),'yyyymmddTHHMMSS'),datestr(bounds(2),'yyyymmddTHHMMSS')};
+    item{1}(9)='';item{2}(9)='';
+    opts_.date_bounds.double=[str2double(item{1}) str2double(item{2})];
+    
+    opts_.RunAsDate__fix=false;
+end
+opts=opts_;
 end
 function is_invalid=WBM_parse_inputs__validate_response_format(response)
 %Check if the content of the response input is in the correct format.
@@ -3554,7 +4498,7 @@ for try_iterations=1:3
         if opts.UseURLwrite
             fn=urlwrite(avl_url,fn); %#ok<URLWR>
             a=readfile(fn);delete(fn);
-            a=loadjson(a{1});
+            a=JSON(a{1});
         else
             a=webread(avl_url);
         end
@@ -3571,7 +4515,7 @@ for try_iterations=1:3
             if opts.verbose>=1
                 msg=sprintf('Internet connection down, retrying in %d seconds (@%s)',...
                     2^connection_down_wait_factor,curr_time);
-                warning_(opts.print_2,msg)
+                warning_(opts.print_to,msg)
             end
             pause(2^connection_down_wait_factor)
             waittime.total=waittime.total+2^connection_down_wait_factor;
@@ -3583,7 +4527,7 @@ end
 try
     %This can fail for 4 reasons: the waittime has been exceeded (e.g. because there is no
     %connection in the first place), the connection is stable enough to get the ping (but not to
-    %read the JSON response), an unparsed error occured when reading the JSON, or the url simply
+    %read the JSON response), an unparsed error occurred when reading the JSON, or the url simply
     %doesn't have a capture.
     timestamp=a.archived_snapshots.closest.timestamp;
     status=str2double(a.archived_snapshots.closest.status);
@@ -3607,4 +4551,32 @@ if isempty(UTC_is_available)
 else
     tf=UTC_is_available;
 end
+end
+function out=WinVer
+%This returns the main Windows version number (5 for XP, 6 for Vista, etc).
+%It will return an empty array for non-Windows or in case of errors.
+persistent persistent_val
+if ~ispc,out=[];return,end
+if isempty(persistent_val)
+    try
+        [status,str] = system('ver'); %#ok<ASGLU>
+        args={'[^0-9]*(\d*).*','$1','tokenize'};
+        v=version;v(min(find(v=='.')):end)='';pre_v7=str2double(v)<7; %#ok<MXFND> 
+        isOctave=exist('OCTAVE_VERSION','builtin')~=0;
+        if ~pre_v7 && ~isOctave
+            args(end)=[];%The 'tokenize' option became the default in R14 (v7).
+        end
+        persistent_val=str2double(regexprep(str,args{:}));
+    catch
+        try
+            [status,str]=system('systeminfo'); %#ok<ASGLU>
+            ind1= 1+strfind(str,':');ind1=ind1(3);
+            ind2=-1+strfind(str,'.');ind2(ind2<ind1)=[];
+            persistent_val=str2double(str(ind1:ind2(1)));
+        catch
+            persistent_val=[];
+        end
+    end
+end
+out=persistent_val;
 end

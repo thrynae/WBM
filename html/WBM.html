@@ -6,7 +6,7 @@
    <!--
 This HTML was auto-generated from MATLAB code.
 To make changes, update the MATLAB code and republish this document.
-      --><title>WBM</title><meta name="generator" content="MATLAB 9.10"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2021-05-19"><meta name="DC.source" content="WBM.m"><style type="text/css">
+      --><title>WBM</title><meta name="generator" content="MATLAB 9.11"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2022-01-22"><meta name="DC.source" content="WBM.m"><style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
 
 html { min-height:100%; margin-bottom:1px; }
@@ -179,52 +179,6 @@ and +14 hours to account for all possible time zones, and the midpoint is shifte
 <br><code>default='warn_3';</code>
 </td></tr>
 <tr><td>
-print_to_con
-</td><td>
-A logical that controls whether warnings and other output will be printed to the command window.
-Errors can't be turned off.
-<br><code>default=true;</code> if print_to_fid, print_to_obj, or print_to_fcn is specified then
-<code>default=false;</code>
-</td></tr>
-<tr><td>
-print_to_fid
-</td><td>
-The file identifier where console output will be printed. Errors and warnings will be printed
-including the call stack. You can provide the fid for the command window (fid=1) to print
-warnings as text. Errors will be printed to the specified file before being actually thrown.
-<br>If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
-suppressing every output except errors.
-<br>This parameter does not affect warnings or errors during input parsing.
-<br>Array inputs are allowed.
-<br><code>default=[];</code>
-</td></tr>
-<tr><td>
-print_to_obj
-</td><td>
-The handle to an object with a String property, e.g. an edit field in a GUI where console output
-will be printed. Messages with newline characters (ignoring trailing newlines) will be returned
-as a cell array. This includes warnings and errors, which will be printed without the call stack.
-Errors will be written to the object before the error is actually thrown.
-<br>If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
-suppressing every output except errors.
-<br>This parameter does not affect warnings or errors during input parsing.
-<br>Array inputs are allowed.
-<br><code>default=[];</code>
-<tr><td>
-print_to_fcn
-</td><td>
-A <code>struct</code> with a function handle, anonymous function or inline function in the
-<code>'h'</code> field and optionally additional data in the <code>'data'</code> field. The
-function should accept three inputs: a <code>char</code> array (either <code>'warning'</code> or
-<code>'error'</code>), a <code>struct</code> with the message, id, and stack, and the optional
-additional data. The function(s) will be run before the error is actually thrown.
-<br>If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
-suppressing every output except errors.
-<br>This parameter does not affect warnings or errors during input parsing.
-<br>Array inputs are allowed.
-<br><code>default=[];</code>
-</td></tr>
-<tr><td>
 m_date_r
 </td><td>
 A string describing the response to the date missing in the downloaded web page. Usually, either
@@ -260,7 +214,7 @@ parameter for more options.
 <tr><td>
 err429
 </td><td>
-Sometimes the webserver will return an 429 status code. This should trigger a waiting period of a
+Sometimes the webserver will return a 429 status code. This should trigger a waiting period of a
 few seconds. This parameter controls the behavior of this function in case of a 429 status code.
 It is a struct with the following fields.
 <br>The CountsAsTry field (logical) describes if the attempt should decrease the tries counter.
@@ -308,6 +262,54 @@ This value is the allowed timeout in seconds. It is ignored if it isn't supporte
 be converitble to a scalar <code>double</code>.
 <br><code>default=10;</code>
 </td></tr>
+<tr><td>
+print_to_con
+</td><td>
+<i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
+<br>A logical that controls whether warnings and other output will be printed to the command
+window. Errors can't be turned off.
+<br><code>default=true;</code> if <code>print_to_fid</code>, <code>print_to_obj</code>, or
+<code>print_to_fcn</code> is specified then <code>default=false;</code>
+</td></tr>
+<tr><td>
+print_to_fid
+</td><td>
+<i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
+<br>The file identifier where console output will be printed. Errors and warnings will be printed
+including the call stack. You can provide the fid for the command window (<code>fid=1</code>) to
+print warnings as text. Errors will be printed to the specified file before the error is actually
+thrown.
+<br>If <code>print_to_fid</code>, <code>print_to_obj</code>, and <code>print_to_fcn</code> are
+all empty, this will have the effect of suppressing every output except errors.
+<br>Array inputs are allowed.
+<br><code>default=[];</code>
+</td></tr>
+<tr><td>
+print_to_obj
+</td><td>
+<i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
+<br>The handle to an object with a String property, e.g. an edit field in a GUI where console
+output will be printed. Messages with newline characters (ignoring trailing newlines) will be
+returned as a cell array. This includes warnings and errors, which will be printed without the
+call stack. Errors will be written to the object before the error is actually thrown.
+<br>If <code>print_to_fid</code>, <code>print_to_obj</code>, and <code>print_to_fcn</code> are
+all empty, this will have the effect of suppressing every output except errors.
+<br>Array inputs are allowed.
+<br><code>default=[];</code>
+<tr><td>
+print_to_fcn
+</td><td>
+<i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
+<br>A <code>struct</code> with a function handle, anonymous function or inline function in the
+<code>'h'</code> field and optionally additional data in the <code>'data'</code> field. The
+function should accept three inputs: a <code>char</code> array (either <code>'warning'</code> or
+<code>'error'</code>), a <code>struct</code> with the message, id, and stack, and the optional
+additional data. The function(s) will be run before the error is actually thrown.
+<br>If <code>print_to_fid</code>, <code>print_to_obj</code>, and <code>print_to_fcn</code> are
+all empty, this will have the effect of suppressing every output except errors.
+<br>Array inputs are allowed.
+<br><code>default=[];</code>
+</td></tr>
 </table>
 </p><h2 id="6">Compatibility, version info, and licence</h2><p>
 Compatibility considerations:
@@ -322,9 +324,15 @@ Compatibility considerations:
 <table>
 <tr>
 <td> Test suite result </td>
-<td style="border:2px solid black;"> Windows XP/7/10 </td>
-<td style="border:2px solid black;"> Ubuntu 20.04 LTS </td>
-<td style="border:2px solid black;"> MacOS 10.15 Catalina </td>
+<td style="border:2px solid black;"> Windows </td>
+<td style="border:2px solid black;"> Linux </td>
+<td style="border:2px solid black;"> MacOS </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Matlab R2021b </td>
+<td> <it>W10 : Pass</it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2021a </td>
@@ -335,8 +343,8 @@ Compatibility considerations:
 <tr>
 <td style="border:2px solid black;"> Matlab R2020b </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it></it> </td>
-<td> <it></it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2020a </td>
@@ -345,15 +353,39 @@ Compatibility considerations:
 <td> <it></it> </td>
 </tr>
 <tr>
+<td style="border:2px solid black;"> Matlab R2019b </td>
+<td> <it>W10 : Pass</it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>Monterey : Pass</it> </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Matlab R2019a </td>
+<td> <it>W10 : Pass</it> </td>
+<td> <it></it> </td>
+<td> <it></it> </td>
+</tr>
+<tr>
 <td style="border:2px solid black;"> Matlab R2018a </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>Pass</it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
 <td> <it></it> </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Matlab R2017b </td>
+<td> <it>W10 : Pass</it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>Monterey : Pass</it> </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Matlab R2016b </td>
+<td> <it>W10 : Pass</it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2015a </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>Pass</it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
@@ -363,21 +395,21 @@ Compatibility considerations:
 <td> <it></it> </td>
 </tr>
 <tr>
-<td style="border:2px solid black;"> Matlab R2012b </td>
-<td> <it>W10 : Pass</it> </td>
+<td style="border:2px solid black;"> Matlab R2012a </td>
 <td> <it></it> </td>
+<td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2011a </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>Pass</it> </td>
+<td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2010b </td>
 <td> <it></it> </td>
-<td> <it>Pass</it> </td>
+<td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
@@ -408,27 +440,27 @@ Compatibility considerations:
 <td style="border:2px solid black;"> Octave 6.2.0 </td>
 <td> <it>W10 : Pass</it> </td>
 <td> <it></it> </td>
-<td> <it></it> </td>
+<td> <it>Catalina : Partial: some test(s) were skipped</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Octave 5.2.0 </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>Pass</it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Octave 4.4.1 </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it></it> </td>
-<td> <it>Pass</it> </td>
+<td> <it>raspbian_10 : Pass</it> </td>
+<td> <it>Catalina : Partial: some test(s) were skipped</it> </td>
 </tr>
 </table>
-</p><pre>Version: 3.0
-Date:    2021-04-22
+</p><pre>Version: 3.1.0
+Date:    2022-01-22
 Author:  H.J. Wisselink
 Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
 Email = 'h_j_wisselink*alumnus_utwente_nl';
-Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2><p>This tester is included so you can test if your own modifications would introduce any bugs. These tests form the basis for the compatibility table above.</p><p>Note that some of the functions in this tester might be different from the functions included in the actual function. Usually this is done to allow triggering of certain errors.</p><p>Even without comments or blank lines and compressing the functions down as much as possible, the tester function is too large for this page. The full tester function (including all comments) can be found <a href="https://web.archive.org/web/20210519083753/https://cdn-102.anonfiles.com/d8c8V5w1u6/35aafa62-1621414070/aaa___WBM___test.m">here</a>.</p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2021a</a><br></p></div><!--
+Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2><p>This tester is included so you can test if your own modifications would introduce any bugs. These tests form the basis for the compatibility table above.</p><p>Note that some of the functions in this tester might be different from the functions included in the actual function. Usually this is done to allow triggering of certain errors.</p><p>Even without comments or blank lines and compressing the functions down as much as possible, the tester function is too large for this page. The full tester function (including all comments) can be found <a href="https://web.archive.org/web/20220122100309/https://cdn-104.anonfiles.com/92l7NbC2xa/45425868-1642846383/aaa___WBM___test.m">here</a>.</p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2021b</a><br></p></div><!--
 ##### SOURCE BEGIN #####
 %% WBM
 %
@@ -562,52 +594,6 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <br><code>default='warn_3';</code>
 % </td></tr>
 % <tr><td>
-% print_to_con
-% </td><td>
-% A logical that controls whether warnings and other output will be printed to the command window.
-% Errors can't be turned off.
-% <br><code>default=true;</code> if print_to_fid, print_to_obj, or print_to_fcn is specified then
-% <code>default=false;</code>
-% </td></tr>
-% <tr><td>
-% print_to_fid
-% </td><td>
-% The file identifier where console output will be printed. Errors and warnings will be printed
-% including the call stack. You can provide the fid for the command window (fid=1) to print
-% warnings as text. Errors will be printed to the specified file before being actually thrown.
-% <br>If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
-% suppressing every output except errors.
-% <br>This parameter does not affect warnings or errors during input parsing.
-% <br>Array inputs are allowed.
-% <br><code>default=[];</code>
-% </td></tr>
-% <tr><td>
-% print_to_obj
-% </td><td>
-% The handle to an object with a String property, e.g. an edit field in a GUI where console output
-% will be printed. Messages with newline characters (ignoring trailing newlines) will be returned
-% as a cell array. This includes warnings and errors, which will be printed without the call stack.
-% Errors will be written to the object before the error is actually thrown.
-% <br>If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
-% suppressing every output except errors.
-% <br>This parameter does not affect warnings or errors during input parsing.
-% <br>Array inputs are allowed.
-% <br><code>default=[];</code>
-% <tr><td>
-% print_to_fcn
-% </td><td>
-% A <code>struct</code> with a function handle, anonymous function or inline function in the
-% <code>'h'</code> field and optionally additional data in the <code>'data'</code> field. The
-% function should accept three inputs: a <code>char</code> array (either <code>'warning'</code> or
-% <code>'error'</code>), a <code>struct</code> with the message, id, and stack, and the optional
-% additional data. The function(s) will be run before the error is actually thrown.
-% <br>If print_to_fid, print_to_obj, and print_to_fcn are all empty, this will have the effect of
-% suppressing every output except errors.
-% <br>This parameter does not affect warnings or errors during input parsing.
-% <br>Array inputs are allowed.
-% <br><code>default=[];</code>
-% </td></tr>
-% <tr><td>
 % m_date_r
 % </td><td>
 % A string describing the response to the date missing in the downloaded web page. Usually, either
@@ -643,7 +629,7 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr><td>
 % err429
 % </td><td>
-% Sometimes the webserver will return an 429 status code. This should trigger a waiting period of a
+% Sometimes the webserver will return a 429 status code. This should trigger a waiting period of a
 % few seconds. This parameter controls the behavior of this function in case of a 429 status code.
 % It is a struct with the following fields.
 % <br>The CountsAsTry field (logical) describes if the attempt should decrease the tries counter.
@@ -691,6 +677,54 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % be converitble to a scalar <code>double</code>.
 % <br><code>default=10;</code>
 % </td></tr>
+% <tr><td>
+% print_to_con
+% </td><td>
+% <i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
+% <br>A logical that controls whether warnings and other output will be printed to the command
+% window. Errors can't be turned off.
+% <br><code>default=true;</code> if <code>print_to_fid</code>, <code>print_to_obj</code>, or
+% <code>print_to_fcn</code> is specified then <code>default=false;</code>
+% </td></tr>
+% <tr><td>
+% print_to_fid
+% </td><td>
+% <i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
+% <br>The file identifier where console output will be printed. Errors and warnings will be printed
+% including the call stack. You can provide the fid for the command window (<code>fid=1</code>) to
+% print warnings as text. Errors will be printed to the specified file before the error is actually
+% thrown.
+% <br>If <code>print_to_fid</code>, <code>print_to_obj</code>, and <code>print_to_fcn</code> are
+% all empty, this will have the effect of suppressing every output except errors.
+% <br>Array inputs are allowed.
+% <br><code>default=[];</code>
+% </td></tr>
+% <tr><td>
+% print_to_obj
+% </td><td>
+% <i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
+% <br>The handle to an object with a String property, e.g. an edit field in a GUI where console
+% output will be printed. Messages with newline characters (ignoring trailing newlines) will be
+% returned as a cell array. This includes warnings and errors, which will be printed without the
+% call stack. Errors will be written to the object before the error is actually thrown.
+% <br>If <code>print_to_fid</code>, <code>print_to_obj</code>, and <code>print_to_fcn</code> are
+% all empty, this will have the effect of suppressing every output except errors.
+% <br>Array inputs are allowed.
+% <br><code>default=[];</code>
+% <tr><td>
+% print_to_fcn
+% </td><td>
+% <i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
+% <br>A <code>struct</code> with a function handle, anonymous function or inline function in the
+% <code>'h'</code> field and optionally additional data in the <code>'data'</code> field. The
+% function should accept three inputs: a <code>char</code> array (either <code>'warning'</code> or
+% <code>'error'</code>), a <code>struct</code> with the message, id, and stack, and the optional
+% additional data. The function(s) will be run before the error is actually thrown.
+% <br>If <code>print_to_fid</code>, <code>print_to_obj</code>, and <code>print_to_fcn</code> are
+% all empty, this will have the effect of suppressing every output except errors.
+% <br>Array inputs are allowed.
+% <br><code>default=[];</code>
+% </td></tr>
 % </table>
 % </html>
 
@@ -710,9 +744,15 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <table>
 % <tr>
 % <td> Test suite result </td>
-% <td style="border:2px solid black;"> Windows XP/7/10 </td>
-% <td style="border:2px solid black;"> Ubuntu 20.04 LTS </td>
-% <td style="border:2px solid black;"> MacOS 10.15 Catalina </td>
+% <td style="border:2px solid black;"> Windows </td>
+% <td style="border:2px solid black;"> Linux </td>
+% <td style="border:2px solid black;"> MacOS </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> Matlab R2021b </td>
+% <td> <it>W10 : Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>Monterey : Pass</it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2021a </td>
@@ -723,8 +763,8 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2020b </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it></it> </td>
-% <td> <it></it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>Monterey : Pass</it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2020a </td>
@@ -733,15 +773,39 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <td> <it></it> </td>
 % </tr>
 % <tr>
+% <td style="border:2px solid black;"> Matlab R2019b </td>
+% <td> <it>W10 : Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>Monterey : Pass</it> </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> Matlab R2019a </td>
+% <td> <it>W10 : Pass</it> </td>
+% <td> <it></it> </td>
+% <td> <it></it> </td>
+% </tr>
+% <tr>
 % <td style="border:2px solid black;"> Matlab R2018a </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
 % <td> <it></it> </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> Matlab R2017b </td>
+% <td> <it>W10 : Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>Monterey : Pass</it> </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> Matlab R2016b </td>
+% <td> <it>W10 : Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>Monterey : Pass</it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2015a </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
@@ -751,21 +815,21 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <td> <it></it> </td>
 % </tr>
 % <tr>
-% <td style="border:2px solid black;"> Matlab R2012b </td>
-% <td> <it>W10 : Pass</it> </td>
+% <td style="border:2px solid black;"> Matlab R2012a </td>
 % <td> <it></it> </td>
+% <td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2011a </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2010b </td>
 % <td> <it></it> </td>
-% <td> <it>Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
@@ -796,25 +860,25 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <td style="border:2px solid black;"> Octave 6.2.0 </td>
 % <td> <it>W10 : Pass</it> </td>
 % <td> <it></it> </td>
-% <td> <it></it> </td>
+% <td> <it>Catalina : Partial: some test(s) were skipped</it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Octave 5.2.0 </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Octave 4.4.1 </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it></it> </td>
-% <td> <it>Pass</it> </td>
+% <td> <it>raspbian_10 : Pass</it> </td>
+% <td> <it>Catalina : Partial: some test(s) were skipped</it> </td>
 % </tr>
 % </table>
 % </html>
 %
-%  Version: 3.0
-%  Date:    2021-04-22
+%  Version: 3.1.0
+%  Date:    2022-01-22
 %  Author:  H.J. Wisselink
 %  Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
 %  Email = 'h_j_wisselink*alumnus_utwente_nl';
@@ -828,7 +892,7 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % Note that some of the functions in this tester might be different from the functions included in
 % the actual function. Usually this is done to allow triggering of certain errors.
 % 
-% Even without comments or blank lines and compressing the functions down as much as possible, the tester function is too large for this page. The full tester function (including all comments) can be found <https://web.archive.org/web/20210519083753/https://cdn-102.anonfiles.com/d8c8V5w1u6/35aafa62-1621414070/aaa___WBM___test.m here>.
+% Even without comments or blank lines and compressing the functions down as much as possible, the tester function is too large for this page. The full tester function (including all comments) can be found <https://web.archive.org/web/20220122100309/https://cdn-104.anonfiles.com/92l7NbC2xa/45425868-1642846383/aaa___WBM___test.m here>.
 
 ##### SOURCE END #####
 --></body></html>
