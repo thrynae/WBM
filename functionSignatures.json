@@ -1,5 +1,6 @@
 {
     "_schemaVersion": "1.0.0",
+    "_v_WBM":"4.0.0",
     "WBM":
     {
         "inputs":
@@ -16,7 +17,9 @@
                  ],
                  [
                      {"name":"date_part",    "kind":"namevalue", "type":["char"],
-                      "purpose":"Partial or complete date of the capture"},
+                      "purpose":"Partial/complete required date of the capture"},
+                     {"name":"target_date",  "kind":"namevalue", "type":["char"],
+                      "purpose":"Partial/complete target date of the capture"},
                      {"name":"tries",        "kind":"namevalue", "type":["numeric","numel=3"],
                       "purpose":"Allowed number of [load,save,timeout]"},
                      {"name":"verbose",      "kind":"namevalue", "type":["numeric","scalar","integer"],
@@ -33,20 +36,22 @@
                       "purpose":"Treat date as local time instead of UTC"},
                      {"name":"if_UTC_failed","kind":"namevalue", "type":["char", "choices={'error','ignore','warn_0','warn_1','warn_2','warn_3'}"],
                       "purpose":"Response options to time zone not found"},
-                     {"name":"print_to_con", "kind":"namevalue", "type":["logical", "scalar"],
-                      "purpose":"Error redirection command window flag"},
-                     {"name":"print_to_fid", "kind":"namevalue", "type":"double",
-                      "purpose":"Error redirection file identifier"},
-                     {"name":"print_to_obj", "kind":"namevalue",
-                      "purpose":"Error redirection object handle"},
-                     {"name":"print_to_fcn", "kind":"namevalue", "type":[["function_handle"],["inline"]],
-                      "purpose":"Error redirection function handle"},
                      {"name":"err429",       "kind":"namevalue", "type":["struct", "scalar"],
                       "purpose":"Response options for error 429"},
                      {"name":"waittime",     "kind":"namevalue", "type":["numeric", "scalar"],
                       "purpose":"Maximum time to wait for internet connection"},
                      {"name":"timeout",      "kind":"namevalue", "type":["numeric", "scalar"],
-                      "purpose":"Allowed timeout in seconds"}
+                      "purpose":"Allowed timeout in seconds"},
+                     {"name":"WBMRequestCounterFile","kind":"namevalue", "type":["char", "choices={'read','reset'}"],
+                      "purpose":"Response options to time zone not found"},
+                     {"name":"print_to_con", "kind":"namevalue", "type":["logical", "scalar"],
+                      "purpose":"Exception redirection command window flag"},
+                     {"name":"print_to_fid", "kind":"namevalue", "type":"double",
+                      "purpose":"Exception redirection file identifier"},
+                     {"name":"print_to_obj", "kind":"namevalue",
+                      "purpose":"Exception redirection object handle"},
+                     {"name":"print_to_fcn", "kind":"namevalue", "type":[["function_handle"],["inline"]],
+                      "purpose":"Exception redirection function handle"}
                  ]
              ]
             }

@@ -5,7 +5,9 @@ This functions acts as an API for the Wayback Machine (web.archive.org).
 With this function you can download captures to the Internet Archive (archive.org) that matches a date pattern. If the current time matches the pattern and there is no valid capture, a capture will be generated.  
 This code enables you to use a specific web page in your processing, without the need to check if the page has changed its structure or is not available at all.  
 You can redirect warnings, displayed messages and the contents of an error message to a GUI element or log file.  
-This script should work on all Matlab releases and on Octave (test file included), as well as every OS (tested on Windows, Ubuntu and MacOS).
+This function should work on most releases of Matlab and GNU Octave, as well as most operating systems. Not all options are supported on every release/OS. See the HTML documentation for the full test matrix.
+
+A counter has been added. This stores the number of calls to archive.org in a file. Please [consider donating](https://archive.org/donate) $1 for every 5000 page requests to offset the operating costs of the Wayback Machine. There will not be any prompt reminding you of this request. For most standard configurations the counter should be shared between all instances of Matlab and Octave running under the a single user.
 
 For non-text captures (images, javascript, CSS files, etc), the flags can be used (see the help text for details).
 

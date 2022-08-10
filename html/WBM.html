@@ -6,7 +6,7 @@
    <!--
 This HTML was auto-generated from MATLAB code.
 To make changes, update the MATLAB code and republish this document.
-      --><title>WBM</title><meta name="generator" content="MATLAB 9.11"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2022-01-22"><meta name="DC.source" content="WBM.m"><style type="text/css">
+      --><title>WBM</title><meta name="generator" content="MATLAB 9.12"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2022-08-10"><meta name="DC.source" content="WBM.m"><style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
 
 html { min-height:100%; margin-bottom:1px; }
@@ -86,10 +86,19 @@ href="https://en.wikipedia.org/wiki/Help:Using_the_Wayback_Machine">Wikipedia he
 Fuzzy date matching behavior is based on <a
 href="https://archive.org/web/web-advancedsearch.php">this</a> archive.org page.
 <br>
-<br>NB: Please be gentle with the WBM. Usage of the WBM doesn't require an API key, logging in or
-anything like that. If you abuse it, you will spoil it for everyone. Please make sure your usage
-does not break this Nice Thing&trade;. If you use it often, please
-<a href="https://archive.org/donate/">consider donating</a>, so the WBM will stick around.
+<br>If the Wayback Machine is useful to you, please <a
+href="https://archive.org/donate/">consider donating</a>. Based on a yearly operating cost of
+35m$ and approximately 6k&nbsp;hits/s, please donate at least $1 for every 5000 requests. They
+don't block API access, require a login, or anything similar. If you abuse it, they may have to
+change that and you will have spoiled it for everyone. Please make sure your usage doesn't break
+this Nice&nbsp;Thing&trade;.
+<br>Generally, each call to this function will result in two requests. A counter will be stored
+in a file. The <code>WBMRequestCounterFile</code> optional input can be used to interact with the
+file. Run <code>WBM([],[],'WBMRequestCounterFile','read')</code> to read the current count.
+<br>(These statistics are based on HTTP responses shown on <a
+href="https://analytics1.archive.org/stats/wb.php#60d">this 60-day average chart</a> and the
+990&nbsp;IRS forms posted by <a
+href="https://projects.propublica.org/nonprofits/organizations/943242767">ProPublica</a>.)
 </p><h2 id="2">Syntax</h2><pre class="language-matlab">WBM(filename,url_part)
 WBM(___,Name,Value)
 WBM(___,options)
@@ -140,6 +149,22 @@ the matching range as possible. So for date_part='2' the range is 2000-01-01 00:
 <br><code>default='2';</code>
 </td></tr>
 <tr><td>
+target_date
+</td><td>
+Normally, the Wayback Machine will return the capture closest to the midpoint between the
+earliest valid date matching the date_part and the latest date matching the date_part. This
+parameter allows setting a different target, while still allowing a broad range of results. This
+can be used to skew the preference when loading a page. Like date_part, it must be in the
+yyyymmddHHMMSS format, and doesn't have to be complete.
+An example would be to provide <code>'date_part','2','target_date','20220630'</code>. That way,
+if a capture is available from 2022, that will be loaded, but any result from 2000 to 2999 is
+allowed. If left empty, the midpoint determined by date_part will be used as the target. If the
+target is in the future (which will be determined by parsing the target to bounds and determining
+the midpoint), it will be cropped to the current local time minus 14 hours to avoid errors in the
+Wayback Machine API call.
+<br><code>default='';</code>
+</td></tr>
+<tr><td>
 UseLocalTime
 </td><td>
 A scalar logical. Interpret the date_part in local time instead of UTC. This has the practical
@@ -185,8 +210,8 @@ A string describing the response to the date missing in the downloaded web page.
 the top bar will be present (which contains links), or the page itself will contain links, so
 this situation may indicate a problem with the save to the WBM. Allowed values are 'ignore',
 'warning' and 'error'. Be aware that non-page content (such as images) will set off this
-response. Flags other than '*' will also set off this response.
-<br><code>default='warning';</code> if <code>flags~='*'</code> then <code>default='ignore';</code>
+response. Flags other than the default will also set off this response.
+<br><code>default='warning';</code> if flags is not default then <code>default='ignore';</code>
 </td></tr>
 <tr><td>
 response
@@ -200,7 +225,7 @@ appropriate next action. The syntax of each row is as follows:
 <br>t1: failed attempt to load, t2: failed attempt to save, tx: either failed to load, or failed
 to save.
 <br>The error code list must be HTML status codes. The Matlab timeout error is encoded with 4080
-(analogous to the HTTP 408 timeout error code). The  error is extracted from the identifier,
+(analogous to the HTTP 408 timeout error code). The error is extracted from the identifier,
 which is not always possible, especially in the case of Octave.
 <br>The response in the third cell is either 'load', 'save', 'exit', or 'pause_retry'. Load and
 save set the preferred type. If a response is not allowed by 'tries' left, the other response
@@ -209,14 +234,17 @@ still no successful download after tries has been exhausted, the output file wil
 the script will exit. The pause_retry is intended for use with an error 429. See the err429
 parameter for more options.
 <br><code>default={'tx',404,'load';'txtx',[404 404],'save';'tx',403,'save';'t2t2',[403
-403],'exit';'tx',429,'pause_retry'};</code>
+403],'exit';'tx',429,'pause_retry';'t2t2t2',429,'exit'};</code>
 </td></tr>
 <tr><td>
 err429
 </td><td>
 Sometimes the webserver will return a 429 status code. This should trigger a waiting period of a
-few seconds. This parameter controls the behavior of this function in case of a 429 status code.
-It is a struct with the following fields.
+few seconds. If this status code is return 3 times for a save, that probably means the number of
+saves is exceeded. Disable saves when retrying within 24 hours, as they will keep leading to this
+error code.
+<br>This parameter controls the behavior of this function in case of a 429 status code. It is a
+struct with the following fields:
 <br>The CountsAsTry field (logical) describes if the attempt should decrease the tries counter.
 <br>The TimeToWait field (double) contains the time in seconds to wait before retrying.
 <br>The PrintAtVerbosityLevel field (double) contains the verbosity level at which a text should
@@ -234,17 +262,19 @@ tries vector from decreasing.
 <tr><td>
 flag
 </td><td>
-The flags can be used to specify an explicit version of the archived page. The options are 'id'
-(identical), 'js' (Javascript), 'cs' (CSS), 'im' (image), 'fw'/'if' (iFrame), or * (explicitly
-expand date, shows calendar in browser mode). With the 'id' flag the page is show as captured
-(i.e. without the WBM banner, making it ideal for e.g. exe files). With the 'id' and '*' flags
-the date check will fail, so the missing date response (m_date_r) will be invoked. For the 'im'
-flag you can circumvent this by first loading in the normal mode ('*'), and then extracting the
-image link from that page. That way you can enforce a date pattern and still get the image. The
-<a href="https://en.wikipedia.org/wiki/Help:Using_the_Wayback_Machine">Wikipedia page</a>
-suggests that a flag syntax requires a full date, but this seems not to be the case, as the date
-can still auto-expand.
-<br><code>default='*';</code>
+The flags can be used to specify an explicit version of the archived page. The options are '',
+'*', 'id' (identical), 'js' (Javascript), 'cs' (CSS), 'im' (image), 'fw'/'if' (iFrame). An empty
+flag will only expand the date. Providing '*' used to explicitly expand the date and only show
+the calendar view when using a browser, but it seems to now also load the calendar with
+websave/urlwrite. With the 'id' flag the page is show as captured (i.e. without the WBM banner,
+making it ideal for e.g. exe files). With the 'id' and '*' flags the date check will fail, so the
+missing date response (m_date_r) will be invoked. For the 'im' flag you can circumvent this by
+first loading in the normal mode (''), and then extracting the image link from that page. That
+way you can enforce a date pattern and still get the image. The <a
+href="https://en.wikipedia.org/wiki/Help:Using_the_Wayback_Machine">Wikipedia page</a> suggests
+that a flag syntax requires a full date, but this seems not to be the case, as the date can still
+auto-expand.
+<br><code>default='';</code>
 </td></tr>
 <tr><td>
 waittime
@@ -261,6 +291,17 @@ timeout
 This value is the allowed timeout in seconds. It is ignored if it isn't supported. The input must
 be converitble to a scalar <code>double</code>.
 <br><code>default=10;</code>
+</td></tr>
+<tr><td>
+WBMRequestCounterFile
+</td><td>
+This must be empty, or a char containing <code>'read'</code> or <code>'reset'</code>. If it is
+provided, all other inputs are ignored, except the exception redirection. That means
+<code>count=WBM([],[],'WBMRequestCounterFile','read');</code> is a valid call. For the
+<code>'read'</code> input, the output will contain the number of requests posted to the Wayback
+Machine. This counter is intended to cover all releases of Matlab and GNU Octave. Using the
+<code>'reset'</code> switch will reset the counter back to 0.
+<br><code>default='';</code>
 </td></tr>
 <tr><td>
 print_to_con
@@ -327,6 +368,12 @@ Compatibility considerations:
 <td style="border:2px solid black;"> Windows </td>
 <td style="border:2px solid black;"> Linux </td>
 <td style="border:2px solid black;"> MacOS </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Matlab R2022a </td>
+<td> <it>W10 : Pass</it> </td>
+<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2021b </td>
@@ -397,19 +444,19 @@ Compatibility considerations:
 <tr>
 <td style="border:2px solid black;"> Matlab R2012a </td>
 <td> <it></it> </td>
-<td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
+<td> <it>ubuntu_20.04 : Partial</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2011a </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
+<td> <it>ubuntu_20.04 : Partial</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2010b </td>
 <td> <it></it> </td>
-<td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
+<td> <it>ubuntu_20.04 : Partial</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
@@ -437,10 +484,16 @@ Compatibility considerations:
 <td> <it></it> </td>
 </tr>
 <tr>
-<td style="border:2px solid black;"> Octave 6.2.0 </td>
+<td style="border:2px solid black;"> Octave 7.1.0 </td>
 <td> <it>W10 : Pass</it> </td>
 <td> <it></it> </td>
-<td> <it>Catalina : Partial: some test(s) were skipped</it> </td>
+<td> <it></it> </td>
+</tr>
+<tr>
+<td style="border:2px solid black;"> Octave 6.2.0 </td>
+<td> <it>W10 : Pass</it> </td>
+<td> <it>raspbian_11 : Partial</it> </td>
+<td> <it>Catalina : Partial</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Octave 5.2.0 </td>
@@ -451,16 +504,16 @@ Compatibility considerations:
 <tr>
 <td style="border:2px solid black;"> Octave 4.4.1 </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>raspbian_10 : Pass</it> </td>
-<td> <it>Catalina : Partial: some test(s) were skipped</it> </td>
+<td> <it></it> </td>
+<td> <it>Catalina : Partial</it> </td>
 </tr>
 </table>
-</p><pre>Version: 3.1.0
-Date:    2022-01-22
+</p><pre>Version: 4.0.0
+Date:    2022-08-10
 Author:  H.J. Wisselink
 Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
 Email = 'h_j_wisselink*alumnus_utwente_nl';
-Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2><p>This tester is included so you can test if your own modifications would introduce any bugs. These tests form the basis for the compatibility table above.</p><p>Note that some of the functions in this tester might be different from the functions included in the actual function. Usually this is done to allow triggering of certain errors.</p><p>Even without comments or blank lines and compressing the functions down as much as possible, the tester function is too large for this page. The full tester function (including all comments) can be found <a href="https://web.archive.org/web/20220122100309/https://cdn-104.anonfiles.com/92l7NbC2xa/45425868-1642846383/aaa___WBM___test.m">here</a>.</p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2021b</a><br></p></div><!--
+Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2><p>This tester is included so you can test if your own modifications would introduce any bugs. These tests form the basis for the compatibility table above. Note that functions may be different between the tester version and the normal function. Make sure to apply any modifications to both. The full tester function (including all comments) can be found <a href="https://web.archive.org/web/20220810104112/https://cdn-101.anonfiles.com/A0Wfg43dya/6e8752ff-1660128471/aaa___WBM___test.m">here</a>.</p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2022a</a><br></p></div><!--
 ##### SOURCE BEGIN #####
 %% WBM
 %
@@ -486,10 +539,19 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % Fuzzy date matching behavior is based on <a
 % href="https://archive.org/web/web-advancedsearch.php">this</a> archive.org page.
 % <br>
-% <br>NB: Please be gentle with the WBM. Usage of the WBM doesn't require an API key, logging in or
-% anything like that. If you abuse it, you will spoil it for everyone. Please make sure your usage
-% does not break this Nice Thing&trade;. If you use it often, please
-% <a href="https://archive.org/donate/">consider donating</a>, so the WBM will stick around.
+% <br>If the Wayback Machine is useful to you, please <a 
+% href="https://archive.org/donate/">consider donating</a>. Based on a yearly operating cost of
+% 35m$ and approximately 6k&nbsp;hits/s, please donate at least $1 for every 5000 requests. They
+% don't block API access, require a login, or anything similar. If you abuse it, they may have to
+% change that and you will have spoiled it for everyone. Please make sure your usage doesn't break
+% this Nice&nbsp;Thing&trade;.
+% <br>Generally, each call to this function will result in two requests. A counter will be stored
+% in a file. The <code>WBMRequestCounterFile</code> optional input can be used to interact with the
+% file. Run <code>WBM([],[],'WBMRequestCounterFile','read')</code> to read the current count.
+% <br>(These statistics are based on HTTP responses shown on <a
+% href="https://analytics1.archive.org/stats/wb.php#60d">this 60-day average chart</a> and the
+% 990&nbsp;IRS forms posted by <a
+% href="https://projects.propublica.org/nonprofits/organizations/943242767">ProPublica</a>.)
 % </html>
 
 %% Syntax
@@ -555,6 +617,22 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <br><code>default='2';</code>
 % </td></tr>
 % <tr><td>
+% target_date
+% </td><td>
+% Normally, the Wayback Machine will return the capture closest to the midpoint between the
+% earliest valid date matching the date_part and the latest date matching the date_part. This
+% parameter allows setting a different target, while still allowing a broad range of results. This
+% can be used to skew the preference when loading a page. Like date_part, it must be in the
+% yyyymmddHHMMSS format, and doesn't have to be complete.
+% An example would be to provide <code>'date_part','2','target_date','20220630'</code>. That way,
+% if a capture is available from 2022, that will be loaded, but any result from 2000 to 2999 is
+% allowed. If left empty, the midpoint determined by date_part will be used as the target. If the
+% target is in the future (which will be determined by parsing the target to bounds and determining
+% the midpoint), it will be cropped to the current local time minus 14 hours to avoid errors in the
+% Wayback Machine API call.
+% <br><code>default='';</code>
+% </td></tr>
+% <tr><td>
 % UseLocalTime
 % </td><td>
 % A scalar logical. Interpret the date_part in local time instead of UTC. This has the practical
@@ -600,8 +678,8 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % the top bar will be present (which contains links), or the page itself will contain links, so
 % this situation may indicate a problem with the save to the WBM. Allowed values are 'ignore',
 % 'warning' and 'error'. Be aware that non-page content (such as images) will set off this
-% response. Flags other than '*' will also set off this response.
-% <br><code>default='warning';</code> if <code>flags~='*'</code> then <code>default='ignore';</code>
+% response. Flags other than the default will also set off this response.
+% <br><code>default='warning';</code> if flags is not default then <code>default='ignore';</code>
 % </td></tr>
 % <tr><td>
 % response
@@ -615,7 +693,7 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <br>t1: failed attempt to load, t2: failed attempt to save, tx: either failed to load, or failed
 % to save.
 % <br>The error code list must be HTML status codes. The Matlab timeout error is encoded with 4080
-% (analogous to the HTTP 408 timeout error code). The  error is extracted from the identifier,
+% (analogous to the HTTP 408 timeout error code). The error is extracted from the identifier,
 % which is not always possible, especially in the case of Octave.
 % <br>The response in the third cell is either 'load', 'save', 'exit', or 'pause_retry'. Load and
 % save set the preferred type. If a response is not allowed by 'tries' left, the other response
@@ -624,14 +702,17 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % the script will exit. The pause_retry is intended for use with an error 429. See the err429
 % parameter for more options.
 % <br><code>default={'tx',404,'load';'txtx',[404 404],'save';'tx',403,'save';'t2t2',[403
-% 403],'exit';'tx',429,'pause_retry'};</code>
+% 403],'exit';'tx',429,'pause_retry';'t2t2t2',429,'exit'};</code>
 % </td></tr>
 % <tr><td>
 % err429
 % </td><td>
 % Sometimes the webserver will return a 429 status code. This should trigger a waiting period of a
-% few seconds. This parameter controls the behavior of this function in case of a 429 status code.
-% It is a struct with the following fields.
+% few seconds. If this status code is return 3 times for a save, that probably means the number of
+% saves is exceeded. Disable saves when retrying within 24 hours, as they will keep leading to this
+% error code.
+% <br>This parameter controls the behavior of this function in case of a 429 status code. It is a
+% struct with the following fields:
 % <br>The CountsAsTry field (logical) describes if the attempt should decrease the tries counter.
 % <br>The TimeToWait field (double) contains the time in seconds to wait before retrying.
 % <br>The PrintAtVerbosityLevel field (double) contains the verbosity level at which a text should
@@ -649,17 +730,19 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr><td>
 % flag
 % </td><td>
-% The flags can be used to specify an explicit version of the archived page. The options are 'id'
-% (identical), 'js' (Javascript), 'cs' (CSS), 'im' (image), 'fw'/'if' (iFrame), or * (explicitly
-% expand date, shows calendar in browser mode). With the 'id' flag the page is show as captured
-% (i.e. without the WBM banner, making it ideal for e.g. exe files). With the 'id' and '*' flags
-% the date check will fail, so the missing date response (m_date_r) will be invoked. For the 'im'
-% flag you can circumvent this by first loading in the normal mode ('*'), and then extracting the
-% image link from that page. That way you can enforce a date pattern and still get the image. The
-% <a href="https://en.wikipedia.org/wiki/Help:Using_the_Wayback_Machine">Wikipedia page</a>
-% suggests that a flag syntax requires a full date, but this seems not to be the case, as the date
-% can still auto-expand.
-% <br><code>default='*';</code>
+% The flags can be used to specify an explicit version of the archived page. The options are '',
+% '*', 'id' (identical), 'js' (Javascript), 'cs' (CSS), 'im' (image), 'fw'/'if' (iFrame). An empty
+% flag will only expand the date. Providing '*' used to explicitly expand the date and only show
+% the calendar view when using a browser, but it seems to now also load the calendar with
+% websave/urlwrite. With the 'id' flag the page is show as captured (i.e. without the WBM banner,
+% making it ideal for e.g. exe files). With the 'id' and '*' flags the date check will fail, so the
+% missing date response (m_date_r) will be invoked. For the 'im' flag you can circumvent this by
+% first loading in the normal mode (''), and then extracting the image link from that page. That
+% way you can enforce a date pattern and still get the image. The <a
+% href="https://en.wikipedia.org/wiki/Help:Using_the_Wayback_Machine">Wikipedia page</a> suggests
+% that a flag syntax requires a full date, but this seems not to be the case, as the date can still
+% auto-expand.
+% <br><code>default='';</code>
 % </td></tr>
 % <tr><td>
 % waittime
@@ -676,6 +759,17 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % This value is the allowed timeout in seconds. It is ignored if it isn't supported. The input must
 % be converitble to a scalar <code>double</code>.
 % <br><code>default=10;</code>
+% </td></tr>
+% <tr><td>
+% WBMRequestCounterFile
+% </td><td>
+% This must be empty, or a char containing <code>'read'</code> or <code>'reset'</code>. If it is
+% provided, all other inputs are ignored, except the exception redirection. That means
+% <code>count=WBM([],[],'WBMRequestCounterFile','read');</code> is a valid call. For the
+% <code>'read'</code> input, the output will contain the number of requests posted to the Wayback
+% Machine. This counter is intended to cover all releases of Matlab and GNU Octave. Using the
+% <code>'reset'</code> switch will reset the counter back to 0.
+% <br><code>default='';</code>
 % </td></tr>
 % <tr><td>
 % print_to_con
@@ -749,6 +843,12 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <td style="border:2px solid black;"> MacOS </td>
 % </tr>
 % <tr>
+% <td style="border:2px solid black;"> Matlab R2022a </td>
+% <td> <it>W10 : Pass</it> </td>
+% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>Monterey : Pass</it> </td>
+% </tr>
+% <tr>
 % <td style="border:2px solid black;"> Matlab R2021b </td>
 % <td> <it>W10 : Pass</it> </td>
 % <td> <it>ubuntu_20.04 : Pass</it> </td>
@@ -817,19 +917,19 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2012a </td>
 % <td> <it></it> </td>
-% <td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
+% <td> <it>ubuntu_20.04 : Partial</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2011a </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
+% <td> <it>ubuntu_20.04 : Partial</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2010b </td>
 % <td> <it></it> </td>
-% <td> <it>ubuntu_20.04 : Partial: some test(s) were skipped</it> </td>
+% <td> <it>ubuntu_20.04 : Partial</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
@@ -857,10 +957,16 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <td> <it></it> </td>
 % </tr>
 % <tr>
-% <td style="border:2px solid black;"> Octave 6.2.0 </td>
+% <td style="border:2px solid black;"> Octave 7.1.0 </td>
 % <td> <it>W10 : Pass</it> </td>
 % <td> <it></it> </td>
-% <td> <it>Catalina : Partial: some test(s) were skipped</it> </td>
+% <td> <it></it> </td>
+% </tr>
+% <tr>
+% <td style="border:2px solid black;"> Octave 6.2.0 </td>
+% <td> <it>W10 : Pass</it> </td>
+% <td> <it>raspbian_11 : Partial</it> </td>
+% <td> <it>Catalina : Partial</it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Octave 5.2.0 </td>
@@ -871,14 +977,14 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr>
 % <td style="border:2px solid black;"> Octave 4.4.1 </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>raspbian_10 : Pass</it> </td>
-% <td> <it>Catalina : Partial: some test(s) were skipped</it> </td>
+% <td> <it></it> </td>
+% <td> <it>Catalina : Partial</it> </td>
 % </tr>
 % </table>
 % </html>
 %
-%  Version: 3.1.0
-%  Date:    2022-01-22
+%  Version: 4.0.0
+%  Date:    2022-08-10
 %  Author:  H.J. Wisselink
 %  Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
 %  Email = 'h_j_wisselink*alumnus_utwente_nl';
@@ -886,13 +992,11 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 
 %% Test suite
 %
-% This tester is included so you can test if your own modifications would introduce any bugs. These
-% tests form the basis for the compatibility table above.
-% 
-% Note that some of the functions in this tester might be different from the functions included in
-% the actual function. Usually this is done to allow triggering of certain errors.
-% 
-% Even without comments or blank lines and compressing the functions down as much as possible, the tester function is too large for this page. The full tester function (including all comments) can be found <https://web.archive.org/web/20220122100309/https://cdn-104.anonfiles.com/92l7NbC2xa/45425868-1642846383/aaa___WBM___test.m here>.
+% This tester is included so you can test if your own modifications would introduce
+% any bugs. These tests form the basis for the compatibility table above. Note that
+% functions may be different between the tester version and the normal function. Make
+% sure to apply any modifications to both. The full tester function (including all
+% comments) can be found <https://web.archive.org/web/20220810104112/https://cdn-101.anonfiles.com/A0Wfg43dya/6e8752ff-1660128471/aaa___WBM___test.m here>.
 
 ##### SOURCE END #####
 --></body></html>
