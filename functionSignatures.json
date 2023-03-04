@@ -1,6 +1,6 @@
 {
     "_schemaVersion": "1.0.0",
-    "_v_WBM":"4.0.0",
+    "_v_WBM":"4.0.1",
     "WBM":
     {
         "inputs":
@@ -44,17 +44,30 @@
                       "purpose":"Allowed timeout in seconds"},
                      {"name":"WBMRequestCounterFile","kind":"namevalue", "type":["char", "choices={'read','reset'}"],
                       "purpose":"Response options to time zone not found"},
-                     {"name":"print_to_con", "kind":"namevalue", "type":["logical", "scalar"],
+                     {"name":"print_to_con","kind":"namevalue",
+                      "type":["logical","scalar"],
                       "purpose":"Exception redirection command window flag"},
-                     {"name":"print_to_fid", "kind":"namevalue", "type":"double",
+                     {"name":"print_to_fid","kind":"namevalue",
+                      "type":"double",
                       "purpose":"Exception redirection file identifier"},
-                     {"name":"print_to_obj", "kind":"namevalue",
+                     {"name":"print_to_obj","kind":"namevalue",
                       "purpose":"Exception redirection object handle"},
-                     {"name":"print_to_fcn", "kind":"namevalue", "type":[["function_handle"],["inline"]],
-                      "purpose":"Exception redirection function handle"}
+                     {"name":"print_to_fcn","kind":"namevalue",
+                      "type":[["function_handle"],["inline"]],
+                      "purpose":"Exception redirection function handle"},
+                     {"name":"print_to_params","kind":"namevalue",
+                      "type":["struct","scalar"],
+                      "purpose":"Exception redirection optional parameters"},
+                     {"name":"print_to_option_ShowTraceInMessage","kind":"namevalue",
+                      "type":["logical","scalar"],
+                      "purpose":"Include function trace in message"},
+                     {"name":"print_to_option_WipeTraceForBuiltin","kind":"namevalue",
+                      "type":["logical","scalar"],
+                      "purpose":"Remove function trace from message"}
                  ]
              ]
             }
         ]
     }
 }
+

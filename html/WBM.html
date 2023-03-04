@@ -6,7 +6,7 @@
    <!--
 This HTML was auto-generated from MATLAB code.
 To make changes, update the MATLAB code and republish this document.
-      --><title>WBM</title><meta name="generator" content="MATLAB 9.12"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2022-08-10"><meta name="DC.source" content="WBM.m"><style type="text/css">
+      --><title>WBM</title><meta name="generator" content="MATLAB 9.13"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2023-03-04"><meta name="DC.source" content="WBM.m"><style type="text/css">
 html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
 
 html { min-height:100%; margin-bottom:1px; }
@@ -102,7 +102,7 @@ href="https://projects.propublica.org/nonprofits/organizations/943242767">ProPub
 </p><h2 id="2">Syntax</h2><pre class="language-matlab">WBM(filename,url_part)
 WBM(___,Name,Value)
 WBM(___,options)
-outfilename=WBM(___)
+outfilename = WBM(___)
 </pre><h2 id="3">Output arguments</h2><p>
 <table border=1>
 <tr><td>
@@ -309,8 +309,10 @@ print_to_con
 <i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
 <br>A logical that controls whether warnings and other output will be printed to the command
 window. Errors can't be turned off.
-<br><code>default=true;</code> if <code>print_to_fid</code>, <code>print_to_obj</code>, or
-<code>print_to_fcn</code> is specified then <code>default=false;</code>
+<br><code>default=true;</code>
+<br>Specifying <code>print_to_fid</code>, <code>print_to_obj</code>, or <code>print_to_fcn</code>
+will change the default to <code>false</code>, unless parsing of any of the other exception
+redirection options results in an error.
 </td></tr>
 <tr><td>
 print_to_fid
@@ -370,15 +372,21 @@ Compatibility considerations:
 <td style="border:2px solid black;"> MacOS </td>
 </tr>
 <tr>
+<td style="border:2px solid black;"> Matlab R2022b </td>
+<td> <it>W10 : Pass</it> </td>
+<td> <it>ubuntu_22.04 : Pass</it> </td>
+<td> <it>Monterey : Pass</it> </td>
+</tr>
+<tr>
 <td style="border:2px solid black;"> Matlab R2022a </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
-<td> <it>Monterey : Pass</it> </td>
+<td> <it></it> </td>
+<td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2021b </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>ubuntu_22.04 : Pass</it> </td>
 <td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
@@ -390,7 +398,7 @@ Compatibility considerations:
 <tr>
 <td style="border:2px solid black;"> Matlab R2020b </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>ubuntu_22.04 : Pass</it> </td>
 <td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
@@ -402,7 +410,7 @@ Compatibility considerations:
 <tr>
 <td style="border:2px solid black;"> Matlab R2019b </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>ubuntu_22.04 : Pass</it> </td>
 <td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
@@ -414,54 +422,30 @@ Compatibility considerations:
 <tr>
 <td style="border:2px solid black;"> Matlab R2018a </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>ubuntu_22.04 : Pass</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2017b </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>ubuntu_22.04 : Pass</it> </td>
 <td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2016b </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>ubuntu_22.04 : Pass</it> </td>
 <td> <it>Monterey : Pass</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2015a </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it>ubuntu_22.04 : Pass</it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Matlab R2013b </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it></it> </td>
-<td> <it></it> </td>
-</tr>
-<tr>
-<td style="border:2px solid black;"> Matlab R2012a </td>
-<td> <it></it> </td>
-<td> <it>ubuntu_20.04 : Partial</it> </td>
-<td> <it></it> </td>
-</tr>
-<tr>
-<td style="border:2px solid black;"> Matlab R2011a </td>
-<td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Partial</it> </td>
-<td> <it></it> </td>
-</tr>
-<tr>
-<td style="border:2px solid black;"> Matlab R2010b </td>
-<td> <it></it> </td>
-<td> <it>ubuntu_20.04 : Partial</it> </td>
-<td> <it></it> </td>
-</tr>
-<tr>
-<td style="border:2px solid black;"> Matlab R2010a </td>
-<td> <it>W7 : Pass</it> </td>
 <td> <it></it> </td>
 <td> <it></it> </td>
 </tr>
@@ -472,19 +456,13 @@ Compatibility considerations:
 <td> <it></it> </td>
 </tr>
 <tr>
-<td style="border:2px solid black;"> Matlab 7.1 (R14SP3) </td>
-<td> <it>XP : Pass</it> </td>
-<td> <it></it> </td>
-<td> <it></it> </td>
-</tr>
-<tr>
 <td style="border:2px solid black;"> Matlab 6.5 (R13) </td>
 <td> <it>W10 : Pass</it> </td>
 <td> <it></it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
-<td style="border:2px solid black;"> Octave 7.1.0 </td>
+<td style="border:2px solid black;"> Octave 7.2.0 </td>
 <td> <it>W10 : Pass</it> </td>
 <td> <it></it> </td>
 <td> <it></it> </td>
@@ -492,28 +470,28 @@ Compatibility considerations:
 <tr>
 <td style="border:2px solid black;"> Octave 6.2.0 </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>raspbian_11 : Partial</it> </td>
-<td> <it>Catalina : Partial</it> </td>
+<td> <it>raspbian_11 : Pass</it> </td>
+<td> <it>Catalina : Pass</it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Octave 5.2.0 </td>
 <td> <it>W10 : Pass</it> </td>
-<td> <it>ubuntu_20.04 : Pass</it> </td>
+<td> <it></it> </td>
 <td> <it></it> </td>
 </tr>
 <tr>
 <td style="border:2px solid black;"> Octave 4.4.1 </td>
 <td> <it>W10 : Pass</it> </td>
 <td> <it></it> </td>
-<td> <it>Catalina : Partial</it> </td>
+<td> <it>Catalina : Pass</it> </td>
 </tr>
 </table>
-</p><pre>Version: 4.0.0
-Date:    2022-08-10
+</p><pre>Version: 4.0.1
+Date:    2023-03-04
 Author:  H.J. Wisselink
 Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
 Email = 'h_j_wisselink*alumnus_utwente_nl';
-Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2><p>This tester is included so you can test if your own modifications would introduce any bugs. These tests form the basis for the compatibility table above. Note that functions may be different between the tester version and the normal function. Make sure to apply any modifications to both. The full tester function (including all comments) can be found <a href="https://web.archive.org/web/20220810104112/https://cdn-101.anonfiles.com/A0Wfg43dya/6e8752ff-1660128471/aaa___WBM___test.m">here</a>.</p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2022a</a><br></p></div><!--
+Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2><p>This tester is included so you can test if your own modifications would introduce any bugs. These tests form the basis for the compatibility table above. Note that functions may be different between the tester version and the normal function. Make sure to apply any modifications to both. The full tester function (including all comments) can be found <a href="https://web.archive.org/web/20230304120152/https://cdn-147.anonfiles.com/idu5Sebaz8/9de934fc-1677931863/aaa___WBM___test.m">here</a>.</p><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2022b</a><br></p></div><!--
 ##### SOURCE BEGIN #####
 %% WBM
 %
@@ -559,7 +537,7 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 %   WBM(filename,url_part)
 %   WBM(___,Name,Value)
 %   WBM(___,options)
-%   outfilename=WBM(___)
+%   outfilename = WBM(___)
 
 %% Output arguments
 %
@@ -777,8 +755,10 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <i>An attempt is made to also use this parameter for warnings or errors during input parsing.</i>
 % <br>A logical that controls whether warnings and other output will be printed to the command
 % window. Errors can't be turned off.
-% <br><code>default=true;</code> if <code>print_to_fid</code>, <code>print_to_obj</code>, or
-% <code>print_to_fcn</code> is specified then <code>default=false;</code>
+% <br><code>default=true;</code>
+% <br>Specifying <code>print_to_fid</code>, <code>print_to_obj</code>, or <code>print_to_fcn</code>
+% will change the default to <code>false</code>, unless parsing of any of the other exception
+% redirection options results in an error.
 % </td></tr>
 % <tr><td>
 % print_to_fid
@@ -843,15 +823,21 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <td style="border:2px solid black;"> MacOS </td>
 % </tr>
 % <tr>
+% <td style="border:2px solid black;"> Matlab R2022b </td>
+% <td> <it>W10 : Pass</it> </td>
+% <td> <it>ubuntu_22.04 : Pass</it> </td>
+% <td> <it>Monterey : Pass</it> </td>
+% </tr>
+% <tr>
 % <td style="border:2px solid black;"> Matlab R2022a </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
-% <td> <it>Monterey : Pass</it> </td>
+% <td> <it></it> </td>
+% <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2021b </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>ubuntu_22.04 : Pass</it> </td>
 % <td> <it>Monterey : Pass</it> </td>
 % </tr>
 % <tr>
@@ -863,7 +849,7 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2020b </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>ubuntu_22.04 : Pass</it> </td>
 % <td> <it>Monterey : Pass</it> </td>
 % </tr>
 % <tr>
@@ -875,7 +861,7 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2019b </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>ubuntu_22.04 : Pass</it> </td>
 % <td> <it>Monterey : Pass</it> </td>
 % </tr>
 % <tr>
@@ -887,54 +873,30 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2018a </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>ubuntu_22.04 : Pass</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2017b </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>ubuntu_22.04 : Pass</it> </td>
 % <td> <it>Monterey : Pass</it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2016b </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>ubuntu_22.04 : Pass</it> </td>
 % <td> <it>Monterey : Pass</it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2015a </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it>ubuntu_22.04 : Pass</it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Matlab R2013b </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it></it> </td>
-% <td> <it></it> </td>
-% </tr>
-% <tr>
-% <td style="border:2px solid black;"> Matlab R2012a </td>
-% <td> <it></it> </td>
-% <td> <it>ubuntu_20.04 : Partial</it> </td>
-% <td> <it></it> </td>
-% </tr>
-% <tr>
-% <td style="border:2px solid black;"> Matlab R2011a </td>
-% <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Partial</it> </td>
-% <td> <it></it> </td>
-% </tr>
-% <tr>
-% <td style="border:2px solid black;"> Matlab R2010b </td>
-% <td> <it></it> </td>
-% <td> <it>ubuntu_20.04 : Partial</it> </td>
-% <td> <it></it> </td>
-% </tr>
-% <tr>
-% <td style="border:2px solid black;"> Matlab R2010a </td>
-% <td> <it>W7 : Pass</it> </td>
 % <td> <it></it> </td>
 % <td> <it></it> </td>
 % </tr>
@@ -945,19 +907,13 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <td> <it></it> </td>
 % </tr>
 % <tr>
-% <td style="border:2px solid black;"> Matlab 7.1 (R14SP3) </td>
-% <td> <it>XP : Pass</it> </td>
-% <td> <it></it> </td>
-% <td> <it></it> </td>
-% </tr>
-% <tr>
 % <td style="border:2px solid black;"> Matlab 6.5 (R13) </td>
 % <td> <it>W10 : Pass</it> </td>
 % <td> <it></it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
-% <td style="border:2px solid black;"> Octave 7.1.0 </td>
+% <td style="border:2px solid black;"> Octave 7.2.0 </td>
 % <td> <it>W10 : Pass</it> </td>
 % <td> <it></it> </td>
 % <td> <it></it> </td>
@@ -965,26 +921,26 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % <tr>
 % <td style="border:2px solid black;"> Octave 6.2.0 </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>raspbian_11 : Partial</it> </td>
-% <td> <it>Catalina : Partial</it> </td>
+% <td> <it>raspbian_11 : Pass</it> </td>
+% <td> <it>Catalina : Pass</it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Octave 5.2.0 </td>
 % <td> <it>W10 : Pass</it> </td>
-% <td> <it>ubuntu_20.04 : Pass</it> </td>
+% <td> <it></it> </td>
 % <td> <it></it> </td>
 % </tr>
 % <tr>
 % <td style="border:2px solid black;"> Octave 4.4.1 </td>
 % <td> <it>W10 : Pass</it> </td>
 % <td> <it></it> </td>
-% <td> <it>Catalina : Partial</it> </td>
+% <td> <it>Catalina : Pass</it> </td>
 % </tr>
 % </table>
 % </html>
 %
-%  Version: 4.0.0
-%  Date:    2022-08-10
+%  Version: 4.0.1
+%  Date:    2023-03-04
 %  Author:  H.J. Wisselink
 %  Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
 %  Email = 'h_j_wisselink*alumnus_utwente_nl';
@@ -996,7 +952,7 @@ Real_email = regexprep(Email,{'*','_'},{'@','.'})</pre><h2 id="7">Test suite</h2
 % any bugs. These tests form the basis for the compatibility table above. Note that
 % functions may be different between the tester version and the normal function. Make
 % sure to apply any modifications to both. The full tester function (including all
-% comments) can be found <https://web.archive.org/web/20220810104112/https://cdn-101.anonfiles.com/A0Wfg43dya/6e8752ff-1660128471/aaa___WBM___test.m here>.
+% comments) can be found <https://web.archive.org/web/20230304120152/https://cdn-147.anonfiles.com/idu5Sebaz8/9de934fc-1677931863/aaa___WBM___test.m here>.
 
 ##### SOURCE END #####
 --></body></html>
