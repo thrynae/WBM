@@ -216,8 +216,8 @@ function outfilename=WBM(filename,url_part,varargin)
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 4.0.1                                                         |%
-%|  Date:    2023-03-04                                                    |%
+%|  Version: 4.0.2                                                         |%
+%|  Date:    2024-01-07                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -237,25 +237,29 @@ function outfilename=WBM(filename,url_part,varargin)
 % /=========================================================================================\
 % ||                     | Windows             | Linux               | MacOS               ||
 % ||---------------------------------------------------------------------------------------||
-% || Matlab R2022b       | W10: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
-% || Matlab R2022a       | W10: Pass           |                     |                     ||
-% || Matlab R2021b       | W10: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
-% || Matlab R2021a       | W10: Pass           |                     |                     ||
-% || Matlab R2020b       | W10: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
-% || Matlab R2020a       | W10: Pass           |                     |                     ||
-% || Matlab R2019b       | W10: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
-% || Matlab R2019a       | W10: Pass           |                     |                     ||
-% || Matlab R2018a       | W10: Pass           | Ubuntu 22.04: Pass  |                     ||
-% || Matlab R2017b       | W10: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
-% || Matlab R2016b       | W10: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
-% || Matlab R2015a       | W10: Pass           | Ubuntu 22.04: Pass  |                     ||
-% || Matlab R2013b       | W10: Pass           |                     |                     ||
-% || Matlab R2007b       | W10: Pass           |                     |                     ||
-% || Matlab 6.5 (R13)    | W10: Pass           |                     |                     ||
-% || Octave 7.2.0        | W10: Pass           |                     |                     ||
-% || Octave 6.2.0        | W10: Pass           | Raspbian 11: Pass   | Catalina: Pass      ||
-% || Octave 5.2.0        | W10: Pass           |                     |                     ||
-% || Octave 4.4.1        | W10: Pass           |                     | Catalina: Pass      ||
+% || Matlab R2023b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2023a       | W11: Pass           |                     |                     ||
+% || Matlab R2022b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2022a       | W11: Pass           |                     |                     ||
+% || Matlab R2021b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2021a       | W11: Pass           |                     |                     ||
+% || Matlab R2020b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2020a       | W11: Pass           |                     |                     ||
+% || Matlab R2019b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2019a       | W11: Pass           |                     |                     ||
+% || Matlab R2018b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2018a       | W11: Pass           |                     |                     ||
+% || Matlab R2017b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2016b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2015a       | W11: Pass           |                     |                     ||
+% || Matlab R2013b       | W11: Pass           |                     |                     ||
+% || Matlab R2007b       | W11: Pass           |                     |                     ||
+% || Matlab 6.5 (R13)    | W11: Pass           |                     |                     ||
+% || Octave 8.4.0        | W11: Pass           |                     |                     ||
+% || Octave 7.2.0        | W11: Pass           |                     |                     ||
+% || Octave 6.2.0        | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Octave 5.2.0        | W11: Pass           |                     |                     ||
+% || Octave 4.4.1        | W11: Pass           |                     |                     ||
 % \=========================================================================================/
 
 if nargin==0 && nargout==0
@@ -373,12 +377,12 @@ while ~success && ...           %no successful download yet?
             if UseURLwrite
                 outfilename = urlwrite(...
                     ['http://web.archive.org/web/' t opts.flag '_/' url_part],...
-                    filename);%#ok<URLWR>
+                    filename); %#ok<URLWR>
                 outfilename = check_filename(filename,outfilename);
             else
-                outfilename = websave(filename,...
+                outfilename = WebsaveInternal(filename,...
                     ['https://web.archive.org/web/' t opts.flag '_/' url_part],...
-                    webopts);
+                    webopts,verbose,print_to);
             end
         elseif type==2 % Save.
             SaveAttempt = true;
@@ -390,9 +394,9 @@ while ~success && ...           %no successful download yet?
                     filename); %#ok<URLWR>
                 outfilename = check_filename(filename,outfilename);
             else
-                outfilename = websave(filename,...
+                outfilename = WebsaveInternal(filename,...
                     ['https://web.archive.org/save/' url_part],...
-                    webopts);
+                    webopts,verbose,print_to);
             end
         end
         success = true;connection_down_wait_factor = 0;
@@ -575,6 +579,18 @@ if nargout==0
     clear(var2str(outfilename));
 end
 end
+function outfilename=WebsaveInternal(filename,url,options,verbose,print_to)
+% Catch any warnings triggered by websave.
+% The best way to do this is with the undocumented warning('error',warnID), but evalc should also
+% do the trick in this case.
+[str,outfilename] = evalc([...
+    func2str(@websave) '(' var2str(filename) ',' var2str(url) ',' var2str(options) ')']);
+if isempty(str),return,end
+if verbose>=2
+    % Warnings are allowed.
+    warning_(print_to,str)
+end
+end
 function [status,waittime,t]=confirm_capture_is_available(url,waittime,opts)
 % Retrieve the time stamp closest to the requested date and compare it to date_part.
 IncrementRequestCounter(opts)
@@ -619,7 +635,7 @@ fprintf(fid,'%d',counter);
 fclose(fid);
 end
 function out=bsxfun_plus(in1,in2)
-%Implicit expansion for plus(), but without any input validation.
+% Implicit expansion for plus(), but without any input validation.
 persistent type
 if isempty(type)
     type = ...
@@ -634,8 +650,16 @@ elseif type==1
     out = bsxfun(@plus,in1,in2);
 else
     % No implicit expansion, expand explicitly.
-    sz1 = size(in1);
-    sz2 = size(in2);
+    % Determine size and find non-singleton dimensions.
+    sz1 = ones(1,max(ndims(in1),ndims(in2)));
+    sz2 = sz1;
+    sz1(1:ndims(in1)) = size(in1);
+    sz2(1:ndims(in2)) = size(in2);
+    L = sz1~=1 & sz2~=1;
+    if ~isequal(sz1(L),sz2(L))
+        error('HJW:bsxfun_plus:arrayDimensionsMustMatch',...
+            'Non-singleton dimensions of the two input arrays must match each other.')
+    end
     if min([sz1 sz2])==0
         % Construct an empty array of the correct size.
         sz1(sz1==0) = inf;sz2(sz2==0) = inf;
@@ -1108,13 +1132,60 @@ try
     p = fullfile(GetWritableFolder,'FileExchange','CheckMexCompilerExistence');
     if isempty(strfind([path ';'],[p ';'])) %#ok<STREMP>
         % This means f is not on the path.
-        if ~exist(p,'dir'),mkdir(p);end
+        if ~exist(p,'dir'),makedir(p);end
         addpath(p,'-end');
     end
 catch
     ME = struct('identifier','HJW:CheckMexCompilerExistence:PathFolderFail',...
         'message','Creating a folder on the path to store the compiled function and flag failed.');
 end
+end
+function fn=CreateValidFieldName(fn,PreviousFieldNames)
+% Create valid field names based on a char input and the already assigned field names.
+% This function is modelled after matlab.lang.makeValidName.
+
+% Only edit the base name if it doesn't match the regular expression.
+[ind1,ind2] = regexp(fn,'[A-Za-z][A-Za-z0-9_]*');
+if ~( numel(ind1)==1 && ind1==1 && ind2==numel(fn) )
+    fn = CreateValidFieldName_helper(fn);
+end
+
+% Check if a counter is needed.
+if nargin==2
+    fn_ = fn;counter = 0;
+    while ismember(fn,PreviousFieldNames)
+        counter = counter+1;fn = sprintf('%s_%d',fn_,counter);
+    end
+end
+end
+function fn=CreateValidFieldName_helper(fn)
+persistent RE dyn_expr
+if isempty(RE)
+    ws = char([9 10 11 12 13 32]);
+    RE = ['[' ws ']+([^' ws '])'];
+    
+    % Dynamically check if the dynamic expression replacement is available. This is possible since
+    % R2006a (v7.2), and has not been implemented yet in Octave 7.
+    dyn_expr = strcmp('fooBar',regexprep('foo bar',RE,'${upper($1)}'));
+end
+if dyn_expr
+    fn = regexprep(fn,RE,'${upper($1)}'); % Convert characters after whitespace to upper case.
+else
+    [s,e] = regexp(fn,RE);
+    if ~isempty(s)
+        fn(e) = upper(fn(e));
+        L = zeros(size(fn));L(s)=1;L(e)=-1;L=logical(cumsum(L));
+        fn(L) = '';
+    end
+end
+fn = regexprep(fn,'\s',''); % Remove all remaining whitespace.
+x = find(double(fn)==0);if ~isempty(x),fn(x(1):end)='';end % Gobble null characters.
+fn = regexprep(fn,'[^0-9a-zA-Z_]','_'); % Replace remaining invalid characters.
+if isempty(fn)||any(fn(1)=='_0123456789')
+    fn = ['x' fn];
+end
+% If the name exceeds 63 characters, crop the trailing characters.
+fn((namelengthmax+1):end) = '';
 end
 function error_(options,varargin)
 %Print an error to the command window, a file and/or the String property of an object.
@@ -1220,6 +1291,7 @@ if isempty(options),options = struct;end
 options                    = parse_warning_error_redirect_options(  options  );
 [id,msg,stack,trace,no_op] = parse_warning_error_redirect_inputs( varargin{:});
 if no_op,return,end
+forced_trace = trace;
 if options.params.ShowTraceInMessage
     msg = sprintf('%s\n%s',msg,trace);
 end
@@ -1236,7 +1308,7 @@ if options.boolean.obj
     else              % Only prepend 'Error: '.
         msg_ = ['Error: ' msg_];
     end
-    for OBJ=options.obj(:).'
+    for OBJ=reshape(options.obj,1,[])
         try set(OBJ,'String',msg_);catch,end
     end
 end
@@ -1244,7 +1316,7 @@ end
 % Print to file.
 if options.boolean.fid
     T = datestr(now,31); %#ok<DATST,TNOW1> Print the time of the error to the log as well.
-    for FID=options.fid(:).'
+    for FID=reshape(options.fid,1,[])
         try fprintf(FID,'[%s] Error: %s\n%s',T,msg,trace);catch,end
     end
 end
@@ -1255,11 +1327,12 @@ if options.boolean.fcn
         % To prevent an infinite loop, trigger an error.
         error('prevent recursion')
     end
-    for FCN=options.fcn(:).'
+    ME_ = ME;ME_.trace = forced_trace;
+    for FCN=reshape(options.fcn,1,[])
         if isfield(FCN,'data')
-            try feval(FCN.h,'error',ME,FCN.data);catch,end
+            try feval(FCN.h,'error',ME_,FCN.data);catch,end
         else
-            try feval(FCN.h,'error',ME);catch,end
+            try feval(FCN.h,'error',ME_);catch,end
         end
     end
 end
@@ -1285,7 +1358,7 @@ else
     % File name is indeed a char. Do a check if there are characters that can't exist in a normal
     % file name. The method used here is not fool-proof, but should cover most use cases and
     % operating systems.
-    [fullpath,fn,ext] = fileparts(filename); %#ok<ASGLU> 
+    [fullpath,fn,ext] = fileparts(filename); %#ok<ASGLU>
     fn = [fn,ext];
     if      any(ismember([char(0:31) '<>:"/\|?*'],fn)) || ...
             any(ismember(forbidden_names,upper(fn))) || ... % (ismember is case sensitive)
@@ -1474,13 +1547,16 @@ function atomTime=getUTC(override)
 %   This method requires internet access.
 % - The local time and timezone offset can be determined with the wmic command or the get-date
 %   Powershell function (Windows) or the date command (Linux and Mac).
+%   On Windows an NTP query is also implemented (internet connectivity is checked prior to this
+%   call).
+%
 %   To speed up the usage of this method, you can cache the difference with now() in a persistent
 %   variable, that way you avoid the need for a slow system call.
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 2.1.0                                                         |%
-%|  Date:    2022-01-22                                                    |%
+%|  Version: 2.2.0                                                         |%
+%|  Date:    2023-11-21                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -1494,7 +1570,7 @@ function atomTime=getUTC(override)
 % - Some older releases don't support the web implementation.
 % - The normal system call hangs on ML7.1 on XP. Since ML6.5 works fine on Windows 10, it seems
 %   reasonable to assume that the OS is the cause of the hang. For XP (and older) there is an
-%   alternative strategy in place, but this has a higher likelyhood to fail.
+%   alternative strategy in place, but this has a higher likelihood to fail.
 % - Similarly, as wmic has been deprecated, a Powershell alternative should be used on newer
 %   versions of Windows. The need for this is automatically detected.
 
@@ -1514,14 +1590,19 @@ if nargin==0
     end
 else
     % Override for debug/test, this will not throw an error on fail.
-    if override==1
-        UTC_epoch_seconds = getUTC_c(false);
-    elseif override==2
-        UTC_epoch_seconds = getUTC_web;
-    elseif override==3
-        UTC_epoch_seconds = getUTC_cmd;
-    else
-        error('non-implemented override')
+    switch override
+        case 1
+            UTC_epoch_seconds = getUTC_c(false);
+        case 2
+            UTC_epoch_seconds = getUTC_web;
+        case 3
+            UTC_epoch_seconds = getUTC_cmd;
+        otherwise
+            if isa(override,'char')
+                UTC_epoch_seconds = getUTC_cmd(override);
+            else
+                error('non-implemented override')
+            end
     end
 end
 UTC_offset = UTC_epoch_seconds/(24*60*60);
@@ -1541,7 +1622,7 @@ if isempty(utc_time_c)
     try
         if isempty(strfind([path ';'],[tempdir_f ';'])) %#ok<STREMP>
             % This means f is not on the path.
-            if ~exist(tempdir_f,'dir'),mkdir(tempdir_f);end
+            if ~exist(tempdir_f,'dir'),makedir(tempdir_f);end
             addpath(tempdir_f,'-end');
         end
     catch
@@ -1644,26 +1725,58 @@ catch
     end
 end
 end
-function UTC_epoch_seconds=getUTC_cmd
+function [UTC_epoch_seconds,call_type]=getUTC_cmd(override_isnetavl,override_call_type)
 % Use a command line implementation.
 % This should return an empty array instead of an error if it fails.
-try
-    call_type = getUTC_cmd_call_type;
-catch
-    warning('determination of call type failed')
-    UTC_epoch_seconds = [];return
+
+if nargin==2
+    call_type = override_call_type;
+else
+    if nargin>=1 && ~isempty(override_isnetavl)
+        InternetConnected = override_isnetavl;
+    else
+        InternetConnected = isnetavl;
+    end
+    try
+        call_type = getUTC_cmd_call_type;
+        try
+            if InternetConnected
+                call_type = call_type.online;
+            else
+                error('trigger offline version')
+            end
+        catch
+            call_type = call_type.offline;
+        end
+    catch
+        warning('determination of call type failed')
+        UTC_epoch_seconds = [];return
+    end
+end
+if nargout==2
+    try
+        call_type = getUTC_cmd_call_type;
+    catch
+        warning('determination of call type failed')
+    end
+    UTC_epoch_seconds = [];
+    return
 end
 
 try
     switch call_type
         case 'Unix'
             UTC_epoch_seconds = getUTC_cmd_Unix;
+        case 'NTP_win'
+            UTC_epoch_seconds = getUTC_cmd_NTP_win;
         case 'WMIC_sys'
             UTC_epoch_seconds = getUTC_cmd_wmic_sys;
         case 'WMIC_bat'
             UTC_epoch_seconds = getUTC_cmd_wmic_bat;
         case 'PS_get_date'
             UTC_epoch_seconds = getUTC_cmd_PS_get_date;
+        otherwise
+            error('call type not implemented')
     end
 catch
     UTC_epoch_seconds = [];
@@ -1673,7 +1786,7 @@ function call_type=getUTC_cmd_call_type
 persistent call_type_
 if isempty(call_type_)
     if ~ispc
-        call_type_ = 'Unix';
+        call_type_ = struct('offline','Unix','online','Unix');
     else
         if WinVer<=5
             % The normal system call hangs on ML7.1 on XP. Since ML6.5 works fine on Windows 10,
@@ -1693,6 +1806,7 @@ if isempty(call_type_)
         else
             call_type_ = 'WMIC_sys';
         end
+        call_type_ = struct('offline',call_type_,'online','NTP_win');
     end
 end
 call_type = call_type_;
@@ -1736,6 +1850,15 @@ date = mat2cell(str(1:21),1,[4 2 2,2 2 2+1+6]);date = str2double(date);
 date(5) = date(5)-str2double(str(22:end)); % Add offset.
 date = num2cell(date);
 UTC_epoch_seconds = (datenum(date{:})-datenum(1970,1,1))*24*60*60; %#ok<DATNM>
+end
+function UTC_epoch_seconds=getUTC_cmd_NTP_win
+% Use a system call to get the time from the Google NTP server.
+persistent LDAP2UTC
+if isempty(LDAP2UTC),LDAP2UTC = (datenum(1601,1,1)-datenum(1970,1,1))*(24*60*60);end %#ok<DATNM>
+[status,str] = system('w32tm /stripchart /computer:time.google.com /dataonly /samples:1 /rdtsc'); %#ok<ASGLU>
+t = regexp_outkeys(str,',\s?([0-9]+)','tokens');
+FileTime = str2double(t{end});
+UTC_epoch_seconds = LDAP2UTC+FileTime/1e7;
 end
 function UTC_epoch_seconds=getUTC_web
 % Read the timestamp from a web server.
@@ -1831,18 +1954,18 @@ end
 root_folder_list{end} = pwd; % Set this default here to avoid storing it in a persistent.
 if ForceStatus
     status = ForceStatus;f=fullfile(root_folder_list{status},'PersistentFolder');
-    try if ~exist(f,'dir'),mkdir(f);end,catch,end
+    try if ~exist(f,'dir'),makedir(f);end,catch,end
     return
 end
 
 % Option 1: use a folder similar to the AddOn Manager.
 status = 1;f = root_folder_list{status};
-try if ~exist(f,'dir'),mkdir(f);end,catch,end
+try if ~exist(f,'dir'),makedir(f);end,catch,end
 if ~TestFolderWritePermission(f)
     % If the Add-On path is not writable, return the tempdir. It will not be persistent, but it
     % will be writable.
     status = 2;f = root_folder_list{status};
-    try if ~exist(f,'dir'),mkdir(f);end,catch,end
+    try if ~exist(f,'dir'),makedir(f);end,catch,end
     if ~TestFolderWritePermission(f)
         % The tempdir should always be writable, but if for some reason it isn't: return the pwd.
         status = 3;f = root_folder_list{status};
@@ -1851,7 +1974,7 @@ end
 
 % Add 'PersistentFolder' to whichever path was determined above.
 f = fullfile(f,'PersistentFolder');
-try if ~exist(f,'dir'),mkdir(f);end,catch,end
+try if ~exist(f,'dir'),makedir(f);end,catch,end
 
 if ~TestFolderWritePermission(f)
     % Apparently even the pwd isn't writable, so we will either return an error, or a fail state.
@@ -1956,6 +2079,7 @@ function tf=hasFeature(feature)
 persistent FeatureList
 if isempty(FeatureList)
     FeatureList = struct(...
+        'HG2'              ,ifversion('>=','R2014b','Octave','<' ,0),...
         'ImplicitExpansion',ifversion('>=','R2016b','Octave','>' ,0),...
         'bsxfun'           ,ifversion('>=','R2007a','Octave','>' ,0),...
         'IntegerArithmetic',ifversion('>=','R2010b','Octave','>' ,0),...
@@ -1983,7 +2107,7 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 %   If the current version satisfies the test this returns true. This works similar to verLessThan.
 % Rxxxxab:
 %   A char array containing a release description (e.g. 'R13', 'R14SP2' or 'R2019a') or the numeric
-%   version (e.g. 6.5, 7, or 9.6).
+%   version (e.g. 6.5, 7, or 9.6). Note that 9.10 is interpreted as 9.1 when using numeric input.
 % test:
 %   A char array containing a logical test. The interpretation of this is equivalent to
 %   eval([current test Rxxxxab]). For examples, see below.
@@ -1992,9 +2116,10 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 % ifversion('>=','R2009a') returns true when run on R2009a or later
 % ifversion('<','R2016a') returns true when run on R2015b or older
 % ifversion('==','R2018a') returns true only when run on R2018a
-% ifversion('==',9.9) returns true only when run on R2020b
+% ifversion('==',23.02) returns true only when run on R2023b
 % ifversion('<',0,'Octave','>',0) returns true only on Octave
 % ifversion('<',0,'Octave','>=',6) returns true only on Octave 6 and higher
+% ifversion('==',9.10) returns true only when run on R2016b (v9.1) not on R2021a (9.10).
 %
 % The conversion is based on a manual list and therefore needs to be updated manually, so it might
 % not be complete. Although it should be possible to load the list from Wikipedia, this is not
@@ -2002,8 +2127,8 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 1.1.2                                                         |%
-%|  Date:    2022-09-16                                                    |%
+%|  Version: 1.2.1.1                                                       |%
+%|  Date:    2023-10-20                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -2012,9 +2137,11 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %
 % Tested on several versions of Matlab (ML 6.5 and onward) and Octave (4.4.1 and onward), and on
-% multiple operating systems (Windows/Ubuntu/MacOS). For the full test matrix, see the HTML doc.
+% multiple operating systems (Windows/Ubuntu/MacOS). You can see the full test matrix below.
 % Compatibility considerations:
 % - This is expected to work on all releases.
+
+if nargin<2 || nargout>1,error('incorrect number of input/output arguments'),end
 
 % The decimal of the version numbers are padded with a 0 to make sure v7.10 is larger than v7.9.
 % This does mean that any numeric version input needs to be adapted. multiply by 100 and round to
@@ -2039,7 +2166,8 @@ if isempty(v_num)
         'R2013a' 801;'R2013b' 802;'R2014a' 803;'R2014b' 804;'R2015a' 805;
         'R2015b' 806;'R2016a' 900;'R2016b' 901;'R2017a' 902;'R2017b' 903;
         'R2018a' 904;'R2018b' 905;'R2019a' 906;'R2019b' 907;'R2020a' 908;
-        'R2020b' 909;'R2021a' 910;'R2021b' 911;'R2022a' 912;'R2022b' 913};
+        'R2020b' 909;'R2021a' 910;'R2021b' 911;'R2022a' 912;'R2022b' 913;
+        'R2023a' 914;'R2023b' 2302};
 end
 
 if octave
@@ -2048,7 +2176,7 @@ if octave
             ['No version test for Octave was provided.',char(10),...
             'This function might return an unexpected outcome.']) %#ok<CHARTEN>
         if isnumeric(Rxxxxab)
-            v = 0.1*Rxxxxab+0.9*fix(Rxxxxab);v = round(100*v);
+            v = 0.1*Rxxxxab+0.9*fixeps(Rxxxxab);v = round(100*v);
         else
             L = ismember(v_dict(:,1),Rxxxxab);
             if sum(L)~=1
@@ -2063,16 +2191,17 @@ if octave
         % Undocumented shorthand syntax: skip the 'Octave' argument.
         [test,v] = deal(Oct_flag,Oct_test);
         % Convert 4.1 to 401.
-        v = 0.1*v+0.9*fix(v);v = round(100*v);
+        v = 0.1*v+0.9*fixeps(v);v = round(100*v);
     else
         [test,v] = deal(Oct_test,Oct_ver);
         % Convert 4.1 to 401.
-        v = 0.1*v+0.9*fix(v);v = round(100*v);
+        v = 0.1*v+0.9*fixeps(v);v = round(100*v);
     end
 else
     % Convert R notation to numeric and convert 9.1 to 901.
     if isnumeric(Rxxxxab)
-        v = 0.1*Rxxxxab+0.9*fix(Rxxxxab);v = round(100*v);
+        % Note that this can't distinguish between 9.1 and 9.10, and will the choose the former.
+        v = fixeps(Rxxxxab*100);if mod(v,10)==0,v = fixeps(Rxxxxab)*100+mod(Rxxxxab,1)*10;end
     else
         L = ismember(v_dict(:,1),Rxxxxab);
         if sum(L)~=1
@@ -2091,6 +2220,10 @@ switch test
     case '>' , tf = v_num >  v;
     case '>=', tf = v_num >= v;
 end
+end
+function val=fixeps(val)
+% Round slightly up to prevent rounding errors using fix().
+val = fix(val+eps*1e3);
 end
 function [connected,timing]=isnetavl(use_HTML_test_only)
 %Check for an internet connection by pinging Google
@@ -2380,7 +2513,6 @@ if isempty(args)
     ws = [9 10 13 32]; % This is not equal to '\s'.
     args = {['[' char(ws) ']*([\[{\]}:,])[' char(ws) ']*'],'$1','tokenize'};
     
-    
     % The 'tokenize' option became the default in R14 (v7).
     if ifversion('>=',7,'Octave','>',0),args(end) = [];end
     
@@ -2587,38 +2719,10 @@ for n=1:size(c_ind,2)
 end
 
 % Determine the fieldnames.
-persistent RE dyn_expr
-if isempty(RE)
-    ws = char([9 10 11 12 13 32]);
-    RE = ['[' ws ']+([^' ws '])'];
-    
-    % Dynamically check if the dynamic expression replacement is available. This is possible since
-    % R2006a (v7.2), and has not been implemented yet in Octave 7.1.0.
-    dyn_expr = strcmp('fooBar',regexprep('foo bar',RE,'${upper($1)}'));
-end
 for n=1:size(brace_content,2)
-    fn = brace_content{1,n};
-    if dyn_expr
-        fn = regexprep(fn,RE,'${upper($1)}'); % Convert characters after whitespace to upper case.
-    else
-        [s,e] = regexp(fn,RE);
-        if ~isempty(s)
-            fn(e) = upper(fn(e));
-            L = zeros(size(fn));L(s)=1;L(e)=-1;L=logical(cumsum(L));
-            fn(L) = '';
-        end
-    end
-    fn = regexprep(fn,'\s',''); % Remove all remaining whitespace.
-    x = find(double(fn)==0);if ~isempty(x),fn(x(1):end)='';end % Gobble null characters.
-    fn = regexprep(fn,'[^0-9a-zA-Z_]','_'); % Replace remaining invalid characters.
-    if isempty(fn)||any(fn(1)=='_0123456789')
-        fn = ['x' fn]; %#ok<AGROW>
-    end
-    fn_ = fn;counter = 0;
-    while ismember(fn,brace_content(1,1:(n-1)))
-        counter = counter+1;fn = sprintf('%s_%d',fn_,counter);
-    end
-    brace_content{1,n} = fn;
+    brace_content{1,n} = CreateValidFieldName(...
+        brace_content{1,n}       ,...
+        brace_content(1,1:(n-1)) );
 end
 
 % Store to struct.
@@ -2823,7 +2927,24 @@ if ismember(class(val{n}),{'double','logical','struct'})
     end
 end
 end
-
+function varargout=makedir(d)
+% Wrapper function to account for old Matlab releases, where mkdir fails if the parent folder does
+% not exist. This function will use the legacy syntax for those releases.
+if exist(d,'dir'),return,end % Take a shortcut if the folder already exists.
+persistent IsLegacy
+if isempty(IsLegacy)
+    % The behavior changed after R14SP3 and before R2007b, but since the legacy syntax will still
+    % work in later releases there isn't really a reason to pinpoint the exact release.
+    IsLegacy = ifversion('<','R2007b','Octave','<',0);
+end
+varargout = cell(1,nargout);
+if IsLegacy
+    [d_parent,d_target] = fileparts(d);
+    [varargout{:}] = mkdir(d_parent,d_target);
+else
+    [varargout{:}] = mkdir(d);
+end
+end
 function [mex_filename,fun_name]=mexname(fun_name)
 %Encode runtime version information in the function name.
 % This can be useful if multiple versions of Matlab or Octave need to use the
@@ -3190,9 +3311,9 @@ opts.boolean.fcn = ~isempty(opts.fcn);
 
 [ErrorFlag,opts.params]=validate_params(opts.params);
 if ErrorFlag
-        ME.message = ['Invalid print_to____params parameter:',char(10),...
-            'should be a scalar struct uniquely matching parameter names.']; %#ok<CHARTEN>
-        ME.identifier = 'HJW:print_to:ValidationFailed';
+    ME.message = ['Invalid print_to____params parameter:',char(10),...
+        'should be a scalar struct uniquely matching parameter names.']; %#ok<CHARTEN>
+    ME.identifier = 'HJW:print_to:ValidationFailed';
     isValid = false;
     if ~AllowFailed,return,end
 end
@@ -3242,7 +3363,8 @@ function [ErrorFlag,item]=validate_fcn(item)
 % accepts the inputs.
 ErrorFlag = false;
 for n=numel(item):-1:1
-    if ~ismember(class(item(n).h),{'function_handle','inline'}) || numel(item(n).h)~=1
+    if ~isa(item,'struct') || ~isfield(item,'h') ||...
+            ~ismember(class(item(n).h),{'function_handle','inline'}) || numel(item(n).h)~=1
         ErrorFlag = true;
         item(n)=[];
     end
@@ -3362,7 +3484,7 @@ if nargin==1
         pat = 'Error using ==> ';
         if strcmp(msg(1:min(end,numel(pat))),pat)
             % Look for the first newline to strip the entire first line.
-            ind = min(find(ismember(double(msg),[10 13]))); %#ok<MXFND> 
+            ind = min(find(ismember(double(msg),[10 13]))); %#ok<MXFND>
             if any(double(msg(ind+1))==[10 13]),ind = ind-1;end
             msg(1:ind) = '';
         end
@@ -3427,7 +3549,7 @@ end
 
 % Now we can validate the struct. Here we will ignore any invalid parameters, replacing them with
 % the default settings.
-[ignore,ignore,opts] = parse_print_to___validate_struct(print_to); %#ok<ASGLU> 
+[ignore,ignore,opts] = parse_print_to___validate_struct(print_to); %#ok<ASGLU>
 end
 function out=PatternReplace(in,pattern,rep)
 %Functionally equivalent to strrep, but extended to more data types.
@@ -3492,39 +3614,6 @@ out(idx) = repmat(rep,1,numel(x));
 
 % Remove the elements beyond the range of what the resultant array should be.
 out((numel(str)+1):end) = [];
-end
-function out=PatternReplace_orginal(in,pattern,rep)
-%Functionally equivalent to strrep, but extended to more data types.
-out = in(:)';
-if numel(pattern)==0
-    L = false(size(in));
-elseif numel(rep)>numel(pattern)
-    error('not implemented (padding required)')
-else
-    L = true(size(in));
-    for n=1:numel(pattern)
-        k = find(in==pattern(n));
-        k = k-n+1;k(k<1) = [];
-        % Now k contains the indices of the beginning of each match.
-        L2 = false(size(L));L2(k) = true;
-        L = L & L2;
-        if ~any(L),break,end
-    end
-end
-k = find(L);
-if ~isempty(k)
-    for n=1:numel(rep)
-        out(k+n-1) = rep(n);
-    end
-    if numel(rep)==0,n = 0;end
-    if numel(pattern)>n
-        k = k(:); % Enforce vector shape and direction.
-        remove = (n+1):numel(pattern);
-        idx = bsxfun_plus(k,remove-1);
-        idx(ismember(idx,k)) = []; % Avoid removing inserted patterns.
-        out(idx(:)) = [];
-    end
-end
 end
 function data=readfile(filename,varargin)
 %Read a UTF-8 or ANSI (US-ASCII) file
@@ -4173,6 +4262,169 @@ end
 opts = opts_;
 print_to_fieldnames = print_to_fieldnames_;
 end
+function varargout=regexp_outkeys(str,expression,varargin)
+%Regexp with outkeys in old releases
+%
+% On older versions of Matlab the regexp function did not allow you to specify the output keys.
+% This function has an implementation of the 'split', 'match', and 'tokens' output keys, so they
+% can be used on any version of Matlab or GNU Octave. The 'start' and 'end' output keys were
+% already supported as trailing outputs, but are now also explictly supported.
+% On releases where this is possible, the builtin is called.
+%
+% Syntax:
+%   out = regexp_outkeys(str,expression,outkey);
+%   [out1,...,outN] = regexp_outkeys(str,expression,outkey1,...,outkeyN);
+%   [___,startIndex] = regexp_outkeys(___);
+%   [___,startIndex,endIndex] = regexp_outkeys(___);
+%
+% Example:
+%  str = 'lorem1 ipsum1.2 dolor3 sit amet 99 ';
+%  words = regexp_outkeys(str,'[ 0-9.]+','split')
+%  numbers = regexp_outkeys(str,'[0-9.]*','match')
+%  [white,end1,start,end2] = regexp_outkeys(str,' ','match','end')
+%
+%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
+%|                                                                         |%
+%|  Version: 2.0.0.1                                                       |%
+%|  Date:    2023-09-12                                                    |%
+%|  Author:  H.J. Wisselink                                                |%
+%|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
+%|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
+%|  Real_email = regexprep(Email,{'*','_'},{'@','.'})                      |%
+%|                                                                         |%
+%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
+%
+% Tested on several versions of Matlab (ML 6.5 and onward) and Octave (4.4.1 and onward), and on
+% multiple operating systems (Windows/Ubuntu/MacOS). You can see the full test matrix below.
+% Compatibility considerations:
+% - Only the 'match', 'split', 'tokens', 'start', and 'end' options are supported. The additional
+%   options provided by regexp are not implemented.
+% - Cell array input is not supported.
+
+if nargin<2
+    error('HJW:regexp_outkeys:SyntaxError',...
+        'No supported syntax used: at least 3 inputs expected.')
+    % As an undocumented feature this can also return s1,s2 without any outkeys specified.
+end
+if ~(ischar(str) && ischar(expression))
+    % The extra parameters in varargin are checked inside the loop.
+    error('HJW:regexp_outkeys:InputError',...
+        'All inputs must be char vectors.')
+end
+if nargout>nargin
+    error('HJW:regexp_outkeys:ArgCount',...
+        'Incorrect number of output arguments. Check syntax.')
+end
+
+persistent legacy errorstr KeysDone__template
+if isempty(legacy)
+    % The legacy struct contains the implemented options as field names. It is used in the error
+    % message.
+    % It is assumed that all Octave versions later than 4.0 support the expanded output, and all
+    % earlier versions do not, even if it is very likely most versions will support it.
+    
+    % Create these as fields so they show up in the error message.
+    legacy.start = true;
+    legacy.end = true;
+    
+    % The switch to find matches was introduced in R14 (along with the 'tokenExtents', 'tokens'
+    % and 'names' output switches).
+    legacy.match = ifversion('<','R14','Octave','<',4);
+    legacy.tokens = legacy.match;
+    
+    % The split option was introduced in R2007b.
+    legacy.split = ifversion('<','R2007b','Octave','<',4);
+    
+    fn = fieldnames(legacy);
+    errorstr = ['Extra regexp output type not implemented,',char(10),'only the following',...
+        ' types are implemented:',char(10),sprintf('%s, ',fn{:})]; %#ok<CHARTEN>
+    errorstr((end-1):end) = ''; % Remove trailing ', '
+    
+    legacy.any = legacy.match || legacy.split || legacy.tokens;
+    
+    % Copy all relevant fields and set them to false.
+    KeysDone__template = legacy;
+    for x=fieldnames(KeysDone__template).',KeysDone__template.(x{1}) = false;end
+end
+
+if legacy.any || nargin==2 || any(ismember(lower(varargin),{'start','end'}))
+    % Determine s1, s2, and TokenIndices only once for the legacy implementations.
+    [s1,s2,TokenIndices] = regexp(str,expression);
+end
+
+if nargin==2
+    varargout = {s1,s2,TokenIndices};return
+end
+
+% Pre-allocate output.
+varargout = cell(size(varargin));
+done = KeysDone__template; % Keep track of outkey in case of repeats.
+% On some releases the Matlab is not convinced split is a variable, so explicitly assign it here.
+split = [];
+for param=1:(nargin-2)
+    if ~ischar(varargin{param})
+        error('HJW:regexp_outkeys:InputError',...
+            'All inputs must be char vectors.')
+    end
+    switch lower(varargin{param})
+        case 'match'
+            if done.match,varargout{param} = match;continue,end
+            if legacy.match
+                % Legacy implementation.
+                match = cell(1,numel(s1));
+                for n=1:numel(s1)
+                    match{n} = str(s1(n):s2(n));
+                end
+            else
+                [match,s1,s2] = regexp(str,expression,'match');
+            end
+            varargout{param} = match;done.match = true;
+        case 'split'
+            if done.split,varargout{param} = split;continue,end
+            if legacy.split
+                % Legacy implementation.
+                split = cell(1,numel(s1)+1);
+                start_index = [s1 numel(str)+1];
+                stop_index = [0 s2];
+                for n=1:numel(start_index)
+                    split{n} = str((stop_index(n)+1):(start_index(n)-1));
+                    if numel(split{n})==0,split{n} = char(ones(0,0));end
+                end
+            else
+                [split,s1,s2] = regexp(str,expression,'split');
+            end
+            varargout{param}=split;done.split = true;
+        case 'tokens'
+            if done.tokens,varargout{param} = tokens;continue,end
+            if legacy.tokens
+                % Legacy implementation.
+                tokens = cell(numel(TokenIndices),0);
+                for n=1:numel(TokenIndices)
+                    if size(TokenIndices{n},2)~=2
+                        % No actual matches for the tokens.
+                        tokens{n} = cell(1,0);
+                    else
+                        for m=1:size(TokenIndices{n},1)
+                            tokens{n}{m} = str(TokenIndices{n}(m,1):TokenIndices{n}(m,2));
+                        end
+                    end
+                end
+            else
+                [tokens,s1,s2] = regexp(str,expression,'tokens');
+            end
+            varargout{param} = tokens;done.tokens = true;
+        case 'start'
+            varargout{param} = s1;
+        case 'end'
+            varargout{param} = s2;
+        otherwise
+            error('HJW:regexp_outkeys:NotImplemented',errorstr)
+    end
+end
+if nargout>param
+    varargout(param+[1 2]) = {s1,s2};
+end
+end
 function str=stringtrim(str)
 % Extend strtrim to remove double spaces as well and implement it for old releases.
 % Strings are converted to cellstr.
@@ -4183,7 +4435,7 @@ function str=stringtrim(str)
 % (GNU Octave) when padding a char matrix with spaces. If a stable output is required, convert to a
 % cellstr prior to calling this function.
 
-if ~(isa(str,'char') || isa(str,'string') || iscellstr(str)) %#ok<ISCLSTR> 
+if ~(isa(str,'char') || isa(str,'string') || iscellstr(str)) %#ok<ISCLSTR>
     error('MATLAB:strtrim:InputClass',...
         'Input should be a string, character array, or a cell array of character arrays.')
 end
@@ -4266,6 +4518,8 @@ if isempty(states)
     states = {...
         true,false;...
         1,0;...
+        'true','false';...
+        '1','0';...
         'on','off';...
         'enable','disable';...
         'enabled','disabled'};
@@ -4292,7 +4546,7 @@ for n=1:size(states,1)
     for m=1:2
         if isequal(val,states{n,m})
             isLogical = true;
-            val = states{1,m};
+            val = states{1,m}; % This selects either true or false.
             return
         end
     end
@@ -4332,6 +4586,8 @@ end
 end
 function str=tmpname(StartFilenameWith,ext)
 % Inject a string in the file name part returned by the tempname function.
+% This is equivalent to the line below:
+% str = fullfile(tempdir,[StartFilenameWith '_' strrep(tempname,tempdir,'') ext])
 if nargin<1,StartFilenameWith = '';end
 if ~isempty(StartFilenameWith),StartFilenameWith = [StartFilenameWith '_'];end
 if nargin<2,ext='';else,if ~strcmp(ext(1),'.'),ext = ['.' ext];end,end
@@ -4373,7 +4629,7 @@ else
     else
         % Encode as UTF-8.
         [char_list,ignore,positions] = unique(unicode); %#ok<ASGLU>
-        str = cell(1,numel(unicode));
+        str = cell(1,numel(unicode)); % Create a row-vector for the result.
         for n=1:numel(char_list)
             str_element = unicode_to_UTF8(char_list(n));
             str_element = uint8(str_element);
@@ -4436,7 +4692,7 @@ b = dec2bin(double(unicode),pers.bits(bytes));
 str(scheme_pos) = b;
 str = bin2dec(str.').';
 end
-function unicode=UTF16_to_unicode(UTF16)
+function [unicode,IsUTF16]=UTF16_to_unicode(UTF16)
 %Convert UTF-16 to the code points stored as uint32
 %
 %See https://en.wikipedia.org/wiki/UTF-16
@@ -4445,6 +4701,10 @@ function unicode=UTF16_to_unicode(UTF16)
 %  xxxxxxxx_xxxxxxxx
 % 2 words (U+10000 to U+10FFFF):
 %  110110xx_xxxxxxxx 110111xx_xxxxxxxx
+%
+% If a second output argument is specified, an attempt is made to convert to Unicode, leaving any
+% invalid encodings in place.
+if nargout>=2,IsUTF16 = true;end
 
 persistent isOctave,if isempty(isOctave),isOctave = exist('OCTAVE_VERSION', 'builtin') ~= 0;end
 UTF16 = uint32(UTF16);
@@ -4462,13 +4722,21 @@ try
         error('trigger error')
     end
 catch
-    error('input is not valid UTF-16 encoded')
+    if nargout>=2
+        IsUTF16 = false;
+        % Remove elements that will cause problems.
+        word2 = intersect(word2,word1+1);
+        if isempty(word2),return,end
+        word1 = word2-1;
+    else
+        error('input is not valid UTF-16 encoded')
+    end
 end
 
-%Binary header:
-% 110110xx_xxxxxxxx 110111xx_xxxxxxxx
-% 00000000 01111111 11122222 22222333
-% 12345678 90123456 78901234 56789012
+% Binary header:
+%  110110xx_xxxxxxxx 110111xx_xxxxxxxx
+%  00000000 01111111 11122222 22222333
+%  12345678 90123456 78901234 56789012
 header_bits = '110110110111';header_locs=[1:6 17:22];
 multiword = UTF16([word1.' word2.']);
 multiword = unique(multiword,'rows');
@@ -4478,13 +4746,18 @@ for n=1:numel(S2)
     bin = dec2bin(double(S2{n}))';
     
     if ~strcmp(header_bits,bin(header_locs))
-        error('input is not valid UTF-16 encoded')
+        if nargout>=2
+            % Set flag and continue to the next pair of words.
+            IsUTF16 = false;continue
+        else
+            error('input is not valid UTF-16')
+        end
     end
     bin(header_locs) = '';
     if ~isOctave
         S3 = uint32(bin2dec(bin  ));
     else
-        S3 = uint32(bin2dec(bin.'));%Octave needs an extra transpose.
+        S3 = uint32(bin2dec(bin.')); % Octave needs an extra transpose.
     end
     S3 = S3+65536;% 0x10000
     % Perform actual replacement.
@@ -4703,6 +4976,7 @@ if isempty(this_fun),this_fun = func2str(@warning_);end
 if isempty(options),options = struct;end
 options                    = parse_warning_error_redirect_options(  options  );
 [id,msg,stack,trace,no_op] = parse_warning_error_redirect_inputs( varargin{:});
+forced_trace = trace;
 
 % Don't waste time parsing the options in case of a no-op.
 if no_op,return,end
@@ -4732,7 +5006,7 @@ end
 if options.params.WipeTraceForBuiltin && strcmp(backtrace.state,'on')
     warning('on','backtrace')
 end
-    
+
 if options.boolean.obj
     msg_ = msg;while msg_(end)==10,msg_(end)=[];end % Crop trailing newline.
     if any(msg_==10)  % Parse to cellstr and prepend warning.
@@ -4741,14 +5015,14 @@ if options.boolean.obj
         msg_ = ['Warning: ' msg_];
     end
     set(options.obj,'String',msg_)
-    for OBJ=options.obj(:).'
+    for OBJ=reshape(options.obj,1,[])
         try set(OBJ,'String',msg_);catch,end
     end
 end
 
 if options.boolean.fid
     T = datestr(now,31); %#ok<DATST,TNOW1> Print the time of the warning to the log as well.
-    for FID=options.fid(:).'
+    for FID=reshape(options.fid,1,[])
         try fprintf(FID,'[%s] Warning: %s\n%s',T,msg,trace);catch,end
     end
 end
@@ -4758,8 +5032,8 @@ if options.boolean.fcn
         % To prevent an infinite loop, trigger an error.
         error('prevent recursion')
     end
-    ME = struct('identifier',id,'message',msg,'stack',stack);
-    for FCN=options.fcn(:).'
+    ME = struct('identifier',id,'message',msg,'stack',stack,'trace',forced_trace);
+    for FCN=reshape(options.fcn,1,[])
         if isfield(FCN,'data')
             try feval(FCN.h,'warning',ME,FCN.data);catch,end
         else
@@ -5218,7 +5492,7 @@ if isempty(filename)
         end
         filename = fullfile(f,'WBM','RequestCounter.txt');
         
-        if ~exist(fileparts(filename),'dir'),mkdir(fileparts(filename));end
+        if ~exist(fileparts(filename),'dir'),makedir(fileparts(filename));end
         
         if ~exist(fileparts(filename),'dir'),error('trigger');end
         
