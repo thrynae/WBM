@@ -38,14 +38,14 @@ Generally, each call to this function will result in two requests. A counter wil
     WBM(___,Name,Value)
     WBM(___,options)
     outfilename = WBM(___)
+    [outfilename,FileCaptureInfo] = WBM(___)
 
 ### Output arguments
 
 |Argument|Description|
 |---|---|
 |outfilename|Full path of the output file, the variable is empty if the download failed.|
-|startIndex|Same result as `'start'` outkey.|
-|endIndex|Same result as `'end'` outkey.|
+|FileCaptureInfo|A struct containing the information about the downloaded file. It contains the timestamp of the file (in the `'timestamp'` field), the flag used (`'flag'`), and the base URL (`'url'`). In short, all elements needed to form the full URL of the capture.|
 
 ### Input arguments
 
@@ -86,6 +86,7 @@ Compatibility considerations:
 
 |Test suite result|Windows|Linux|MacOS|
 |---|---|---|---|
+|Matlab R2024a|<it>W11 : Pass</it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
 |Matlab R2023b|<it>W11 : Pass</it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
 |Matlab R2023a|<it>W11 : Pass</it>|<it></it>|<it></it>|
 |Matlab R2022b|<it>W11 : Pass</it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
@@ -96,7 +97,7 @@ Compatibility considerations:
 |Matlab R2020a|<it>W11 : Pass</it>|<it></it>|<it></it>|
 |Matlab R2019b|<it>W11 : Pass</it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
 |Matlab R2019a|<it>W11 : Pass</it>|<it></it>|<it></it>|
-|Matlab R2018b|<it>W11 : Pass</it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
+|Matlab R2018b|<it>W11 : </it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
 |Matlab R2018a|<it>W11 : Pass</it>|<it></it>|<it></it>|
 |Matlab R2017b|<it>W11 : Pass</it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
 |Matlab R2016b|<it>W11 : Pass</it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
@@ -106,12 +107,12 @@ Compatibility considerations:
 |Matlab 6.5 (R13)|<it>W11 : Pass</it>|<it></it>|<it></it>|
 |Octave 8.4.0|<it>W11 : Pass</it>|<it></it>|<it></it>|
 |Octave 7.2.0|<it>W11 : Pass</it>|<it></it>|<it></it>|
-|Octave 6.2.0|<it>W11 : Pass</it>|<it>ubuntu_22.04 : Pass</it>|<it>Monterey : Pass</it>|
+|Octave 6.2.0|<it>W11 : Pass</it>|<it>raspbian_11 : Pass</it>|<it>Monterey : Pass</it>|
 |Octave 5.2.0|<it>W11 : Pass</it>|<it></it>|<it></it>|
 |Octave 4.4.1|<it>W11 : Pass</it>|<it></it>|<it></it>|
 
-    Version: 4.0.2
-    Date:    2024-01-07
+    Version: 4.1.0
+    Date:    2024-04-10
     Author:  H.J. Wisselink
     Licence: CC by-nc-sa 4.0 ( https://creativecommons.org/licenses/by-nc-sa/4.0 )
     Email = 'h_j_wisselink*alumnus_utwente_nl';

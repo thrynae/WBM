@@ -1,8 +1,15 @@
 {
     "_schemaVersion": "1.0.0",
-    "_v_WBM":"4.0.2",
+    "_v_WBM":"4.1.0",
     "WBM":
     {
+        "outputs":
+        [
+            {"name":"outfilename", "type":["char"],
+             "purpose":"Output file name (empty if failed)"},
+            {"name":"FileCaptureInfo", "type":["struct"],
+             "purpose":"Information about downloaded capture"}
+        ],
         "inputs":
         [
             {"name":"filename", "kind":"required",

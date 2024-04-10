@@ -1,4 +1,4 @@
-function outfilename=WBM(filename,url_part,varargin)
+function [outfilename,FileCaptureInfo]=WBM(filename,url_part,varargin)
 %This functions acts as an API for the Wayback Machine (web.archive.org)
 %
 % With this function you can download captures to the internet archive that matches a date pattern.
@@ -28,12 +28,17 @@ function outfilename=WBM(filename,url_part,varargin)
 %
 % Syntax:
 %   outfilename = WBM(filename,url_part)
-%   outfilename = WBM(___,Name,Value)
-%   outfilename = WBM(___,options)
+%   [outfilename,FileCaptureInfo] = WBM(filename,url_part)
+%   [___] = WBM(___,Name,Value)
+%   [___] = WBM(___,options)
 %
 % Input/output arguments:
 % outfilename:
 %   Full path of the output file, the variable is empty if the download failed.
+% FileCaptureInfo:
+%   A struct containing the information about the downloaded file. It contains the timestamp of the
+%   file (in the 'timestamp' field), the flag used ('flag'), and the base URL ('url'). In short,
+%   all elements needed to form the full URL of the capture.
 % filename:
 %   The target filename in any format that websave (or urlwrite) accepts. If this file already
 %   exists, it will be overwritten in most cases.
@@ -216,8 +221,8 @@ function outfilename=WBM(filename,url_part,varargin)
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 4.0.2                                                         |%
-%|  Date:    2024-01-07                                                    |%
+%|  Version: 4.1.0                                                         |%
+%|  Date:    2024-04-10                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -237,6 +242,7 @@ function outfilename=WBM(filename,url_part,varargin)
 % /=========================================================================================\
 % ||                     | Windows             | Linux               | MacOS               ||
 % ||---------------------------------------------------------------------------------------||
+% || Matlab R2024a       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
 % || Matlab R2023b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
 % || Matlab R2023a       | W11: Pass           |                     |                     ||
 % || Matlab R2022b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
@@ -247,7 +253,7 @@ function outfilename=WBM(filename,url_part,varargin)
 % || Matlab R2020a       | W11: Pass           |                     |                     ||
 % || Matlab R2019b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
 % || Matlab R2019a       | W11: Pass           |                     |                     ||
-% || Matlab R2018b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Matlab R2018b       | W11:                | Ubuntu 22.04: Pass  | Monterey: Pass      ||
 % || Matlab R2018a       | W11: Pass           |                     |                     ||
 % || Matlab R2017b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
 % || Matlab R2016b       | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
@@ -257,7 +263,7 @@ function outfilename=WBM(filename,url_part,varargin)
 % || Matlab 6.5 (R13)    | W11: Pass           |                     |                     ||
 % || Octave 8.4.0        | W11: Pass           |                     |                     ||
 % || Octave 7.2.0        | W11: Pass           |                     |                     ||
-% || Octave 6.2.0        | W11: Pass           | Ubuntu 22.04: Pass  | Monterey: Pass      ||
+% || Octave 6.2.0        | W11: Pass           | Raspbian 11: Pass   | Monterey: Pass      ||
 % || Octave 5.2.0        | W11: Pass           |                     |                     ||
 % || Octave 4.4.1        | W11: Pass           |                     |                     ||
 % \=========================================================================================/
@@ -283,6 +289,7 @@ if ~success
     % If the parsing of print_to failed (which is tried first), the default will be used.
     error_(opts.print_to,ME)
 end
+if nargout>1,FileCaptureInfo=struct;end % Pre-allocate the output variable.
 [        tries,     verbose,     UseURLwrite,     err429,     print_to] = ...
     deal(...
     opts.tries,opts.verbose,opts.UseURLwrite,opts.err429,opts.print_to);
@@ -570,13 +577,15 @@ end
 filename2 = [filename '.html'];
 if exist(filename2,'file')
     a=dir(filename2);
-    if numel(a)==1 && a.bytes==0 && abs(datenum(a.date)-now)<=(1/24) %#ok<TNOW1,DATNM>
+    if numel(a)==1 && a.bytes==0 && abs(datenum(a.date)-now)<=(1/24) %#ok<ISCL,TNOW1,DATNM>
         % Apparently the file is newly created.
         try delete(filename2);catch,end % Assume a 0 byte is never correct (although it might be).
     end
 end
 if nargout==0
     clear(var2str(outfilename));
+elseif nargout>1
+    FileCaptureInfo = struct('timestamp',t,'flag',opts.flag,'url',url_part);
 end
 end
 function outfilename=WebsaveInternal(filename,url,options,verbose,print_to)
@@ -2116,7 +2125,7 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 % ifversion('>=','R2009a') returns true when run on R2009a or later
 % ifversion('<','R2016a') returns true when run on R2015b or older
 % ifversion('==','R2018a') returns true only when run on R2018a
-% ifversion('==',23.02) returns true only when run on R2023b
+% ifversion('==',24.01) returns true only when run on R2024a
 % ifversion('<',0,'Octave','>',0) returns true only on Octave
 % ifversion('<',0,'Octave','>=',6) returns true only on Octave 6 and higher
 % ifversion('==',9.10) returns true only when run on R2016b (v9.1) not on R2021a (9.10).
@@ -2127,8 +2136,8 @@ function tf=ifversion(test,Rxxxxab,Oct_flag,Oct_test,Oct_ver)
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 1.2.1.1                                                       |%
-%|  Date:    2023-10-20                                                    |%
+%|  Version: 1.2.1.2                                                       |%
+%|  Date:    2024-03-23                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -2167,7 +2176,7 @@ if isempty(v_num)
         'R2015b' 806;'R2016a' 900;'R2016b' 901;'R2017a' 902;'R2017b' 903;
         'R2018a' 904;'R2018b' 905;'R2019a' 906;'R2019b' 907;'R2020a' 908;
         'R2020b' 909;'R2021a' 910;'R2021b' 911;'R2022a' 912;'R2022b' 913;
-        'R2023a' 914;'R2023b' 2302};
+        'R2023a' 914;'R2023b' 2302;'R2024a' 2401};
 end
 
 if octave

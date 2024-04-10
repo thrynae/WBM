@@ -88,7 +88,7 @@ if ~isempty(SelfTestFailMessage) || ThrowError
     end
 end
 disp(['tester function ' mfilename ' finished '])
-if nargout==0,clear,end
+if nargout==0,clearvars,end
 end
 function S=prepare_files(set_websavepause_value)
 persistent persistent_S
@@ -194,7 +194,7 @@ function [success,ME,skipped]=test02
 success = true;skipped = false;
 try ME = [];
     checkpoint('aaa___WBM___test','WBM')
-    [out1,out2] = WBM('in1','in2'); %#ok<ASGLU>
+    [out1,out2,out3] = WBM('in1','in2'); %#ok<ASGLU>
 catch ME;if isempty(ME),ME = lasterror;end %#ok<LERR>
     if ~(   strcmp(ME.identifier,'MATLAB:TooManyOutputs') || ...
             strcmp(ME.identifier,'HJW:WBM:nargout') || ...
@@ -1540,7 +1540,7 @@ v007={'R13' 605;'R13SP1' 605;'R13SP2' 605;'R14' 700;'R14SP1' 700;'R14SP2' 700;'R
 'R2013a' 801;'R2013b' 802;'R2014a' 803;'R2014b' 804;'R2015a' 805;'R2015b' 806;'R2016a' 900;
 'R2016b' 901;'R2017a' 902;'R2017b' 903;'R2018a' 904;'R2018b' 905;'R2019a' 906;'R2019b' 907;
 'R2020a' 908;'R2020b' 909;'R2021a' 910;'R2021b' 911;'R2022a' 912;'R2022b' 913;'R2023a' 914;
-'R2023b' 2302};end,if v008,if nargin==2,warning('HJW:ifversion:NoOctaveTest',...
+'R2023b' 2302;'R2024a' 2401};end,if v008,if nargin==2,warning('HJW:ifversion:NoOctaveTest',...
 ['No version test for Octave was provided.',char(10),...
 'This function might return an unexpected outcome.']),if isnumeric(v002),v009=...
 0.1*v002+0.9*GetWritableFolder_f03(v002);v009=round(100*v009);else,v010=ismember(v007(:,1),...
@@ -1587,7 +1587,7 @@ v007={'R13' 605;'R13SP1' 605;'R13SP2' 605;'R14' 700;'R14SP1' 700;'R14SP2' 700;'R
 'R2013a' 801;'R2013b' 802;'R2014a' 803;'R2014b' 804;'R2015a' 805;'R2015b' 806;'R2016a' 900;
 'R2016b' 901;'R2017a' 902;'R2017b' 903;'R2018a' 904;'R2018b' 905;'R2019a' 906;'R2019b' 907;
 'R2020a' 908;'R2020b' 909;'R2021a' 910;'R2021b' 911;'R2022a' 912;'R2022b' 913;'R2023a' 914;
-'R2023b' 2302};end,if v008,if nargin==2,warning('HJW:ifversion:NoOctaveTest',...
+'R2023b' 2302;'R2024a' 2401};end,if v008,if nargin==2,warning('HJW:ifversion:NoOctaveTest',...
 ['No version test for Octave was provided.',char(10),...
 'This function might return an unexpected outcome.']),if isnumeric(v002),v009=...
 0.1*v002+0.9*ifversion_f00(v002);v009=round(100*v009);else,v010=ismember(v007(:,1),v002);if ...
@@ -4545,7 +4545,7 @@ if options.boolean.fcn
     end
 end
 end
-function outfilename=WBM(filename,url_part,varargin)
+function [outfilename,FileCaptureInfo]=WBM(filename,url_part,varargin)
 %This functions acts as an API for the Wayback Machine (web.archive.org)
 %
 % With this function you can download captures to the internet archive that matches a date pattern.
@@ -4575,12 +4575,17 @@ function outfilename=WBM(filename,url_part,varargin)
 %
 % Syntax:
 %   outfilename = WBM(filename,url_part)
-%   outfilename = WBM(___,Name,Value)
-%   outfilename = WBM(___,options)
+%   [outfilename,FileCaptureInfo] = WBM(filename,url_part)
+%   [___] = WBM(___,Name,Value)
+%   [___] = WBM(___,options)
 %
 % Input/output arguments:
 % outfilename:
 %   Full path of the output file, the variable is empty if the download failed.
+% FileCaptureInfo:
+%   A struct containing the information about the downloaded file. It contains the timestamp of the
+%   file (in the 'timestamp' field), the flag used ('flag'), and the base URL ('url'). In short,
+%   all elements needed to form the full URL of the capture.
 % filename:
 %   The target filename in any format that websave (or urlwrite) accepts. If this file already
 %   exists, it will be overwritten in most cases.
@@ -4763,8 +4768,8 @@ function outfilename=WBM(filename,url_part,varargin)
 %
 %/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%/%
 %|                                                                         |%
-%|  Version: 4.0.2                                                         |%
-%|  Date:    2024-01-07                                                    |%
+%|  Version: 4.1.0                                                         |%
+%|  Date:    2024-04-10                                                    |%
 %|  Author:  H.J. Wisselink                                                |%
 %|  Licence: CC by-nc-sa 4.0 ( creativecommons.org/licenses/by-nc-sa/4.0 ) |%
 %|  Email = 'h_j_wisselink*alumnus_utwente_nl';                            |%
@@ -4804,6 +4809,7 @@ if ~success
     checkpoint('WBM','error_')
     error_(opts.print_to,ME)
 end
+if nargout>1,FileCaptureInfo=struct;end % Pre-allocate the output variable.
 [        tries,     verbose,     UseURLwrite,     err429,     print_to] = ...
     deal(...
     opts.tries,opts.verbose,opts.UseURLwrite,opts.err429,opts.print_to);
@@ -4903,12 +4909,12 @@ while ~success && ...           %no successful download yet?
                     filename); %#ok<URLWR>
                 checkpoint('WBM','check_filename')
                 outfilename = check_filename(filename,outfilename);
-                checkpoint('WBM_____________________________________line317','CoverTest')
+                checkpoint('WBM_____________________________________line323','CoverTest')
             else
                 outfilename = WebsaveInternal(filename,...
                     ['https://web.archive.org/web/' t opts.flag '_/' url_part],...
                     webopts,verbose,print_to);
-                checkpoint('WBM_____________________________________line322','CoverTest')
+                checkpoint('WBM_____________________________________line328','CoverTest')
             end
         elseif type==2 % Save.
             SaveAttempt = true;
@@ -5103,7 +5109,7 @@ end
 filename2 = [filename '.html'];
 if exist(filename2,'file')
     a=dir(filename2);
-    if numel(a)==1 && a.bytes==0 && abs(datenum(a.date)-now)<=(1/24) %#ok<TNOW1,DATNM>
+    if numel(a)==1 && a.bytes==0 && abs(datenum(a.date)-now)<=(1/24) %#ok<ISCL,TNOW1,DATNM>
         % Apparently the file is newly created.
         try delete(filename2);catch,end % Assume a 0 byte is never correct (although it might be).
     end
@@ -5111,6 +5117,8 @@ end
 if nargout==0
     checkpoint('WBM','var2str')
     clear(var2str(outfilename));
+elseif nargout>1
+    FileCaptureInfo = struct('timestamp',t,'flag',opts.flag,'url',url_part);
 end
 end
 function outfilename=WebsaveInternal(filename,url,options,verbose,print_to)
